@@ -28,7 +28,7 @@ type (
 		Schedule(key Key) (common.Cursor[ScheduleEvent], error)
 	}
 
-	NewCursorFunc[T common.UnixTimestamped] func(log common.Log[T], boundUnixTime int64) (common.Cursor[T], error)
+	newCursorFunc[T common.UnixTimestamped] func(log common.Log[T], boundUnixTime int64) (common.Cursor[T], error)
 )
 
 type brokerageDataProvider struct {
@@ -98,22 +98,22 @@ type brokerageDataReader struct {
 	registry      BrokerageDataEventLogRegistry
 	boundUnixTime int64
 
-	newBookCursor     NewCursorFunc[BookEvent]
-	newCandleCursor   NewCursorFunc[CandleEvent]
-	newTradeCursor    NewCursorFunc[TradeEvent]
-	newSymbolCursor   NewCursorFunc[SymbolEvent]
-	newScheduleCursor NewCursorFunc[ScheduleEvent]
+	newBookCursor     newCursorFunc[BookEvent]
+	newCandleCursor   newCursorFunc[CandleEvent]
+	newTradeCursor    newCursorFunc[TradeEvent]
+	newSymbolCursor   newCursorFunc[SymbolEvent]
+	newScheduleCursor newCursorFunc[ScheduleEvent]
 }
 
 func newBrokerageDataReader(
 	registry BrokerageDataEventLogRegistry,
 	boundUnixTime int64,
 
-	newBookCursor NewCursorFunc[BookEvent],
-	newCandleCursor NewCursorFunc[CandleEvent],
-	newTradeCursor NewCursorFunc[TradeEvent],
-	newSymbolCursor NewCursorFunc[SymbolEvent],
-	newScheduleCursor NewCursorFunc[ScheduleEvent],
+	newBookCursor newCursorFunc[BookEvent],
+	newCandleCursor newCursorFunc[CandleEvent],
+	newTradeCursor newCursorFunc[TradeEvent],
+	newSymbolCursor newCursorFunc[SymbolEvent],
+	newScheduleCursor newCursorFunc[ScheduleEvent],
 ) BrokerageDataReader {
 	return &brokerageDataReader{
 		registry:      registry,
@@ -172,19 +172,19 @@ func (this *brokerageDataReader) Schedule(key Key) (common.Cursor[ScheduleEvent]
 	return this.newScheduleCursor(log, this.boundUnixTime)
 }
 
-func newCursorBeforeFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
+func newCursorBeforeFunc[T common.UnixTimestamped]() newCursorFunc[T] {
 	return func(log common.Log[T], endUnixTime int64) (common.Cursor[T], error) {
 		return log.NewCursorBefore(endUnixTime)
 	}
 }
 
-func newCursorAtFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
+func newCursorAtFunc[T common.UnixTimestamped]() newCursorFunc[T] {
 	return func(log common.Log[T], floorUnixTime int64) (common.Cursor[T], error) {
 		return log.NewCursorAt(floorUnixTime)
 	}
 }
 
-func newCursorAfterFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
+func newCursorAfterFunc[T common.UnixTimestamped]() newCursorFunc[T] {
 	return func(log common.Log[T], startUnixTime int64) (common.Cursor[T], error) {
 		return log.NewCursorAfter(startUnixTime)
 	}
