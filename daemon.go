@@ -112,41 +112,42 @@ func (this daemonContainer) Equal(that daemonContainer) bool
 func (this daemonContainer) After(that daemonContainer) bool
 func (this daemonContainer) Compare(that daemonContainer) int
 
-type daemonManager struct {
+type DaemonManager struct {
 	daemon   kit.CoarseSortedSet13[daemonContainer]
 	factory  kit.CoarseMap[uuid.UUID, DaemonFactory[Daemon]]
-	registry BrokerageDataEventLogRegistry
+	_        [32]byte
+	registry CoarseBrokerageDataEventLogRegistry
 }
 
-func NewManager() Manager {
-	return new(daemonManager)
+func NewDaemonManager() *DaemonManager {
+	return new(DaemonManager)
 }
 
-func (this *daemonManager) Run(ctx context.Context) error
-func (this *daemonManager) Shutdown(ctx context.Context) error
+func (this *DaemonManager) Run(ctx context.Context) error
+func (this *DaemonManager) Shutdown(ctx context.Context) error
 
-func (this *daemonManager) Pause(hidden bool, filter func(DaemonInfo) bool) error
+func (this *DaemonManager) Pause(hidden bool, filter func(DaemonInfo) bool) error
 
-func (this *daemonManager) Resume(hidden bool, filter func(DaemonInfo) bool) error
-func (this *daemonManager) Restart(hidden bool, filter func(DaemonInfo) bool) error
-func (this *daemonManager) Report(hidden bool, filter func(DaemonInfo) bool) []byte { return nil }
-func (this *daemonManager) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) ([]DaemonInfo, error)
+func (this *DaemonManager) Resume(hidden bool, filter func(DaemonInfo) bool) error
+func (this *DaemonManager) Restart(hidden bool, filter func(DaemonInfo) bool) error
+func (this *DaemonManager) Report(hidden bool, filter func(DaemonInfo) bool) []byte { return nil }
+func (this *DaemonManager) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) ([]DaemonInfo, error)
 
-func (this *daemonManager) Hide(id uuid.UUID, note string) error
-func (this *daemonManager) Show(id uuid.UUID) error
-func (this *daemonManager) Get(id uuid.UUID) (Daemon, error)
-func (this *daemonManager) Revive(id uuid.UUID) error
+func (this *DaemonManager) Hide(id uuid.UUID, note string) error
+func (this *DaemonManager) Show(id uuid.UUID) error
+func (this *DaemonManager) Get(id uuid.UUID) (Daemon, error)
+func (this *DaemonManager) Revive(id uuid.UUID) error
 
-func (this *daemonManager) AddPlugin(factory BrokeragePluginFactory) error
-func (this *daemonManager) RemovePlugin(id uuid.UUID) error
-func (this *daemonManager) AddSymbolWatchDog(factory SymbolWatchDogFactory) error
-func (this *daemonManager) RemoveSymbolWatchDog(id uuid.UUID) error
-func (this *daemonManager) AddScheduleProducer(factory ScheduleProducerFactory) error
-func (this *daemonManager) RemoveScheduleProducer(id uuid.UUID) error
+func (this *DaemonManager) AddPlugin(factory BrokeragePluginFactory) error
+func (this *DaemonManager) RemovePlugin(id uuid.UUID) error
+func (this *DaemonManager) AddSymbolWatchDog(factory SymbolWatchDogFactory) error
+func (this *DaemonManager) RemoveSymbolWatchDog(id uuid.UUID) error
+func (this *DaemonManager) AddScheduleProducer(factory ScheduleProducerFactory) error
+func (this *DaemonManager) RemoveScheduleProducer(id uuid.UUID) error
 
-func (this *daemonManager) AddBookProducer(factory BookProducerFactory) error
-func (this *daemonManager) AddCandleProducer(factory CandleProducerFactory) error
-func (this *daemonManager) AddTradeProducer(factory TradeProducerFactory) error
-func (this *daemonManager) RemoveBookProducer(id uuid.UUID) error
-func (this *daemonManager) RemoveCandleProducer(id uuid.UUID) error
-func (this *daemonManager) RemoveTradeProducer(id uuid.UUID) error
+func (this *DaemonManager) AddBookProducer(factory BookProducerFactory) error
+func (this *DaemonManager) AddCandleProducer(factory CandleProducerFactory) error
+func (this *DaemonManager) AddTradeProducer(factory TradeProducerFactory) error
+func (this *DaemonManager) RemoveBookProducer(id uuid.UUID) error
+func (this *DaemonManager) RemoveCandleProducer(id uuid.UUID) error
+func (this *DaemonManager) RemoveTradeProducer(id uuid.UUID) error

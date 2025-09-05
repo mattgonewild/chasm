@@ -21,11 +21,11 @@ type (
 	}
 
 	BrokerageDataReader interface {
-		Book(key uint) (common.Cursor[BookEvent], error)
-		Candle(key uint) (common.Cursor[CandleEvent], error)
-		Trade(key uint) (common.Cursor[TradeEvent], error)
-		Symbol(key uint) (common.Cursor[SymbolEvent], error)
-		Schedule(key uint) (common.Cursor[ScheduleEvent], error)
+		Book(key Key) (common.Cursor[BookEvent], error)
+		Candle(key Key) (common.Cursor[CandleEvent], error)
+		Trade(key Key) (common.Cursor[TradeEvent], error)
+		Symbol(key Key) (common.Cursor[SymbolEvent], error)
+		Schedule(key Key) (common.Cursor[ScheduleEvent], error)
 	}
 
 	NewCursorFunc[T common.UnixTimestamped] func(log common.Log[T], boundUnixTime int64) (common.Cursor[T], error)
@@ -127,7 +127,7 @@ func NewBrokerageDataReader(
 	}
 }
 
-func (this *brokerageDataReader) Book(key uint) (common.Cursor[BookEvent], error) {
+func (this *brokerageDataReader) Book(key Key) (common.Cursor[BookEvent], error) {
 	log, err := this.registry.Book().Get(key)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func (this *brokerageDataReader) Book(key uint) (common.Cursor[BookEvent], error
 	return this.newBookCursor(log, this.boundUnixTime)
 }
 
-func (this *brokerageDataReader) Candle(key uint) (common.Cursor[CandleEvent], error) {
+func (this *brokerageDataReader) Candle(key Key) (common.Cursor[CandleEvent], error) {
 	log, err := this.registry.Candle().Get(key)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (this *brokerageDataReader) Candle(key uint) (common.Cursor[CandleEvent], e
 	return this.newCandleCursor(log, this.boundUnixTime)
 }
 
-func (this *brokerageDataReader) Trade(key uint) (common.Cursor[TradeEvent], error) {
+func (this *brokerageDataReader) Trade(key Key) (common.Cursor[TradeEvent], error) {
 	log, err := this.registry.Trade().Get(key)
 	if err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func (this *brokerageDataReader) Trade(key uint) (common.Cursor[TradeEvent], err
 	return this.newTradeCursor(log, this.boundUnixTime)
 }
 
-func (this *brokerageDataReader) Symbol(key uint) (common.Cursor[SymbolEvent], error) {
+func (this *brokerageDataReader) Symbol(key Key) (common.Cursor[SymbolEvent], error) {
 	log, err := this.registry.Symbol().Get(key)
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (this *brokerageDataReader) Symbol(key uint) (common.Cursor[SymbolEvent], e
 	return this.newSymbolCursor(log, this.boundUnixTime)
 }
 
-func (this *brokerageDataReader) Schedule(key uint) (common.Cursor[ScheduleEvent], error) {
+func (this *brokerageDataReader) Schedule(key Key) (common.Cursor[ScheduleEvent], error) {
 	log, err := this.registry.Schedule().Get(key)
 	if err != nil {
 		return nil, err
