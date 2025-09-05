@@ -116,11 +116,18 @@ type daemonManager struct {
 	daemon   kit.CoarseSortedSet13[daemonContainer]
 	factory  kit.CoarseMap[uuid.UUID, DaemonFactory[Daemon]]
 	_        [32]byte
-	registry CoarseBrokerageDataEventLogRegistry
+	registry brokerageDataEventLogRegistry
 }
 
 func NewManager() Manager {
-	return new(daemonManager)
+	manager := new(daemonManager)
+	kit.InitCoarseMap(&manager.factory, 8192)
+	kit.InitCoarseRegistry(&manager.registry.book, 8192)
+	kit.InitCoarseRegistry(&manager.registry.candle, (8192 * 11))
+	kit.InitCoarseRegistry(&manager.registry.trade, 8192)
+	kit.InitCoarseRegistry(&manager.registry.symbol, 4)
+	kit.InitCoarseRegistry(&manager.registry.schedule, 4)
+	return manager
 }
 
 func (this *daemonManager) Run(ctx context.Context) error
