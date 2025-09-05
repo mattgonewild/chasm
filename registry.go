@@ -36,16 +36,6 @@ type brokerageDataEventLogRegistry struct {
 	_        [32]byte
 }
 
-func NewBrokerageDataEventLogRegistry() BrokerageDataEventLogRegistry {
-	registry := new(brokerageDataEventLogRegistry)
-	kit.InitCoarseRegistry(&registry.book, 8192)
-	kit.InitCoarseRegistry(&registry.candle, (8192 * 11))
-	kit.InitCoarseRegistry(&registry.trade, 8192)
-	kit.InitCoarseRegistry(&registry.symbol, 4)
-	kit.InitCoarseRegistry(&registry.schedule, 4)
-	return registry
-}
-
 func (this *brokerageDataEventLogRegistry) Book() BookEventLogRegistry         { return &this.book }
 func (this *brokerageDataEventLogRegistry) Candle() CandleEventLogRegistry     { return &this.candle }
 func (this *brokerageDataEventLogRegistry) Trade() TradeEventLogRegistry       { return &this.trade }

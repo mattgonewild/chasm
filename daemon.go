@@ -101,16 +101,14 @@ type (
 	}
 )
 
-type daemonContainer struct {
-	Daemon
-	hidden bool
-	note   string
+type Config struct {
+	Factory  int
+	Book     int
+	Candle   int
+	Trade    int
+	Symbol   int
+	Schedule int
 }
-
-func (this daemonContainer) Before(that daemonContainer) bool
-func (this daemonContainer) Equal(that daemonContainer) bool
-func (this daemonContainer) After(that daemonContainer) bool
-func (this daemonContainer) Compare(that daemonContainer) int
 
 type daemonManager struct {
 	daemon   kit.CoarseSortedSet13[daemonContainer]
@@ -119,14 +117,14 @@ type daemonManager struct {
 	registry brokerageDataEventLogRegistry
 }
 
-func NewManager() Manager {
+func NewManager(cfg Config) Manager {
 	manager := new(daemonManager)
-	kit.InitCoarseMap(&manager.factory, 8192)
-	kit.InitCoarseRegistry(&manager.registry.book, 8192)
-	kit.InitCoarseRegistry(&manager.registry.candle, (8192 * 11))
-	kit.InitCoarseRegistry(&manager.registry.trade, 8192)
-	kit.InitCoarseRegistry(&manager.registry.symbol, 4)
-	kit.InitCoarseRegistry(&manager.registry.schedule, 4)
+	kit.InitCoarseMap(&manager.factory, cfg.Factory)
+	kit.InitCoarseRegistry(&manager.registry.book, cfg.Book)
+	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Candle)
+	kit.InitCoarseRegistry(&manager.registry.trade, cfg.Trade)
+	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Symbol)
+	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Schedule)
 	return manager
 }
 
@@ -158,3 +156,14 @@ func (this *daemonManager) AddTradeProducer(factory TradeProducerFactory) error
 func (this *daemonManager) RemoveBookProducer(id uuid.UUID) error
 func (this *daemonManager) RemoveCandleProducer(id uuid.UUID) error
 func (this *daemonManager) RemoveTradeProducer(id uuid.UUID) error
+
+type daemonContainer struct {
+	Daemon
+	hidden bool
+	note   string
+}
+
+func (this daemonContainer) Before(that daemonContainer) bool
+func (this daemonContainer) Equal(that daemonContainer) bool
+func (this daemonContainer) After(that daemonContainer) bool
+func (this daemonContainer) Compare(that daemonContainer) int
