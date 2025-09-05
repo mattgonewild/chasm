@@ -35,60 +35,60 @@ type brokerageDataProvider struct {
 	registry BrokerageDataEventLogRegistry
 }
 
-func NewBrokerageDataProvider(registry BrokerageDataEventLogRegistry) BrokerageDataProvider {
+func newBrokerageDataProvider(registry BrokerageDataEventLogRegistry) BrokerageDataProvider {
 	return &brokerageDataProvider{
 		registry: registry,
 	}
 }
 
-func (this *brokerageDataProvider) Get() BrokerageData { return NewBrokerageData(this.registry) }
+func (this *brokerageDataProvider) Get() BrokerageData { return newBrokerageData(this.registry) }
 
 type brokerageData struct {
 	registry BrokerageDataEventLogRegistry
 }
 
-func NewBrokerageData(registry BrokerageDataEventLogRegistry) BrokerageData {
+func newBrokerageData(registry BrokerageDataEventLogRegistry) BrokerageData {
 	return &brokerageData{
 		registry: registry,
 	}
 }
 
 func (this *brokerageData) Before(endUnixTime int64) BrokerageDataReader {
-	return NewBrokerageDataReader(
+	return newBrokerageDataReader(
 		this.registry,
 		endUnixTime,
 
-		NewCursorBeforeFunc[BookEvent](),
-		NewCursorBeforeFunc[CandleEvent](),
-		NewCursorBeforeFunc[TradeEvent](),
-		NewCursorBeforeFunc[SymbolEvent](),
-		NewCursorBeforeFunc[ScheduleEvent](),
+		newCursorBeforeFunc[BookEvent](),
+		newCursorBeforeFunc[CandleEvent](),
+		newCursorBeforeFunc[TradeEvent](),
+		newCursorBeforeFunc[SymbolEvent](),
+		newCursorBeforeFunc[ScheduleEvent](),
 	)
 }
 
 func (this *brokerageData) At(floorUnixTime int64) BrokerageDataReader {
-	return NewBrokerageDataReader(
+	return newBrokerageDataReader(
 		this.registry,
 		floorUnixTime,
 
-		NewCursorAtFunc[BookEvent](),
-		NewCursorAtFunc[CandleEvent](),
-		NewCursorAtFunc[TradeEvent](),
-		NewCursorAtFunc[SymbolEvent](),
-		NewCursorAtFunc[ScheduleEvent](),
+		newCursorAtFunc[BookEvent](),
+		newCursorAtFunc[CandleEvent](),
+		newCursorAtFunc[TradeEvent](),
+		newCursorAtFunc[SymbolEvent](),
+		newCursorAtFunc[ScheduleEvent](),
 	)
 }
 
 func (this *brokerageData) After(startUnixTime int64) BrokerageDataReader {
-	return NewBrokerageDataReader(
+	return newBrokerageDataReader(
 		this.registry,
 		startUnixTime,
 
-		NewCursorAfterFunc[BookEvent](),
-		NewCursorAfterFunc[CandleEvent](),
-		NewCursorAfterFunc[TradeEvent](),
-		NewCursorAfterFunc[SymbolEvent](),
-		NewCursorAfterFunc[ScheduleEvent](),
+		newCursorAfterFunc[BookEvent](),
+		newCursorAfterFunc[CandleEvent](),
+		newCursorAfterFunc[TradeEvent](),
+		newCursorAfterFunc[SymbolEvent](),
+		newCursorAfterFunc[ScheduleEvent](),
 	)
 }
 
@@ -105,7 +105,7 @@ type brokerageDataReader struct {
 	newScheduleCursor NewCursorFunc[ScheduleEvent]
 }
 
-func NewBrokerageDataReader(
+func newBrokerageDataReader(
 	registry BrokerageDataEventLogRegistry,
 	boundUnixTime int64,
 
@@ -172,19 +172,19 @@ func (this *brokerageDataReader) Schedule(key Key) (common.Cursor[ScheduleEvent]
 	return this.newScheduleCursor(log, this.boundUnixTime)
 }
 
-func NewCursorBeforeFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
+func newCursorBeforeFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
 	return func(log common.Log[T], endUnixTime int64) (common.Cursor[T], error) {
 		return log.NewCursorBefore(endUnixTime)
 	}
 }
 
-func NewCursorAtFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
+func newCursorAtFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
 	return func(log common.Log[T], floorUnixTime int64) (common.Cursor[T], error) {
 		return log.NewCursorAt(floorUnixTime)
 	}
 }
 
-func NewCursorAfterFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
+func newCursorAfterFunc[T common.UnixTimestamped]() NewCursorFunc[T] {
 	return func(log common.Log[T], startUnixTime int64) (common.Cursor[T], error) {
 		return log.NewCursorAfter(startUnixTime)
 	}
