@@ -4,14 +4,11 @@ import (
 	"errors"
 	"iter"
 	"sync"
-	"time"
 
 	"github.com/mattgonewild/common"
 )
 
 type (
-	Key uint
-
 	Registry[T any] interface {
 		Claim(key Key) (T, bool)
 		Register(key Key, value T) error
@@ -33,12 +30,6 @@ type (
 		Schedule() ScheduleEventLogRegistry
 	}
 )
-
-func EncodeSymbolKey(symbol string) Key
-func DecodeSymbolKey(key Key) string
-
-func EncodeCandleKey(symbol string, interval time.Duration) Key
-func DecodeCandleKey(key Key) (string, time.Duration)
 
 type registryEntry[T any] struct {
 	claimed bool
