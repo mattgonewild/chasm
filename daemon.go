@@ -2,6 +2,7 @@ package chasm
 
 import (
 	"errors"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/mattgonewild/common"
@@ -95,7 +96,7 @@ type (
 type Config struct {
 	// Lineage tracks factories seen and entries are not deleted.
 	// This is an initial bucket hint only; maps grow as needed, never shrink.
-	// Per entry ≈ 40 B.
+	// Per entry ≈ 32 B.
 	Lineage int
 
 	// Factories are kept around forever so daemons can be revived.
@@ -111,6 +112,10 @@ type Config struct {
 	// This directly limits how many daemons can be loaded at any given time so choose wisely.
 	// The containers that go in are ≈ 32 B. Daemons can be killed and removed as needed.
 	Chasm int
+
+	// Must not be nil.
+	OnAdd  func(DaemonInfo)
+	OnKill func(DaemonInfo)
 }
 
 type FactoryConfig struct {
@@ -134,7 +139,7 @@ func NewManager(cfg Config) Manager {
 	return nil
 }
 
-type domain uint
+type domain uint8
 
 const (
 	symbol domain = iota
@@ -147,13 +152,13 @@ const (
 )
 
 type lineage struct {
+	alive  bool
 	domain domain
 	ptr    *container
-	alive  bool
 }
 
 func newLineage(domain domain, ptr *container) lineage {
-	return lineage{domain: domain, ptr: ptr, alive: true}
+	return lineage{alive: true, domain: domain, ptr: ptr}
 }
 
 func reviveLineage(lineage lineage, ptr *container) lineage {
@@ -162,30 +167,28 @@ func reviveLineage(lineage lineage, ptr *container) lineage {
 	return lineage
 }
 
+func endLineage(lineage lineage) lineage {
+	lineage.alive = false
+	lineage.ptr = nil
+	return lineage
+}
+
 type container struct {
 	Daemon
-	startUnixTime int64
-	hidden        bool
+	id     uint64
+	hidden bool
 }
 
-func newContainer(daemon Daemon) container {
-	return container{Daemon: daemon, startUnixTime: kit.UnixNano()}
+func newContainer(daemon Daemon, id uint64) container {
+	return container{Daemon: daemon, id: id}
 }
 
-func (this container) Before(that container) bool {
-	return this.startUnixTime < that.startUnixTime
-}
-
-func (this container) Equal(that container) bool {
-	return this.startUnixTime == that.startUnixTime
-}
-
-func (this container) After(that container) bool {
-	return this.startUnixTime > that.startUnixTime
-}
+func (this container) Before(that container) bool { return this.id < that.id }
+func (this container) Equal(that container) bool  { return this.id == that.id }
+func (this container) After(that container) bool  { return this.id > that.id }
 
 func (this container) Compare(that container) int {
-	return kit.BoolToInt(this.startUnixTime > that.startUnixTime) - kit.BoolToInt(this.startUnixTime < that.startUnixTime)
+	return kit.BoolToInt(this.id > that.id) - kit.BoolToInt(this.id < that.id)
 }
 
 type newDaemonFunc func(id uuid.UUID) (Daemon, error)
@@ -215,6 +218,9 @@ type daemonManager7 struct {
 	}
 	registry brokerageDataLogRegistry
 	chasm    kit.CoarseSortedSet7[container]
+	counter  atomic.Uint64
+	onAdd    func(DaemonInfo)
+	onKill   func(DaemonInfo)
 }
 
 func newDaemonManager7(cfg Config) *daemonManager7 {
@@ -237,6 +243,8 @@ func newDaemonManager7(cfg Config) *daemonManager7 {
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
 	kit.InitCoarseRegistry(&manager.registry.trade, cfg.Registry.Trade)
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
+	manager.onAdd = cfg.OnAdd
+	manager.onKill = cfg.OnKill
 	return manager
 }
 
@@ -353,13 +361,15 @@ func (this *daemonManager7) Revive(id uuid.UUID) error {
 		return err
 	}
 
-	container := newContainer(daemon)
+	container := newContainer(daemon, this.counter.Add(1))
 	if err := this.chasm.Put(container); err != nil {
 		return err
 	}
 
 	this.lineage.Set(id, reviveLineage(lineage, &container))
-	return daemon.Run()
+	err = daemon.Run()
+	this.onAdd(daemon)
+	return err
 }
 
 func (this *daemonManager7) newSymbolDaemon(id uuid.UUID) (Daemon, error) {
@@ -435,14 +445,16 @@ func (this *daemonManager7) AddSymbolProducer(factory SymbolFactory) error {
 		return err
 	}
 
-	container := newContainer(daemon)
+	container := newContainer(daemon, this.counter.Add(1))
 	if err := this.chasm.Put(container); err != nil {
 		return err
 	}
 
 	this.factory.symbol.Set(id, factory)
 	this.lineage.Set(id, newLineage(symbol, &container))
-	return daemon.Run()
+	err = daemon.Run()
+	this.onAdd(daemon)
+	return err
 }
 
 func (this *daemonManager7) AddBookProducer(factory BookFactory) error {
@@ -458,14 +470,16 @@ func (this *daemonManager7) AddBookProducer(factory BookFactory) error {
 		return err
 	}
 
-	container := newContainer(daemon)
+	container := newContainer(daemon, this.counter.Add(1))
 	if err := this.chasm.Put(container); err != nil {
 		return err
 	}
 
 	this.factory.book.Set(id, factory)
 	this.lineage.Set(id, newLineage(book, &container))
-	return daemon.Run()
+	err = daemon.Run()
+	this.onAdd(daemon)
+	return err
 }
 
 func (this *daemonManager7) AddCandleProducer(factory CandleFactory) error {
@@ -481,14 +495,16 @@ func (this *daemonManager7) AddCandleProducer(factory CandleFactory) error {
 		return err
 	}
 
-	container := newContainer(daemon)
+	container := newContainer(daemon, this.counter.Add(1))
 	if err := this.chasm.Put(container); err != nil {
 		return err
 	}
 
 	this.factory.candle.Set(id, factory)
 	this.lineage.Set(id, newLineage(candle, &container))
-	return daemon.Run()
+	err = daemon.Run()
+	this.onAdd(daemon)
+	return err
 }
 
 func (this *daemonManager7) AddTradeProducer(factory TradeFactory) error {
@@ -504,14 +520,16 @@ func (this *daemonManager7) AddTradeProducer(factory TradeFactory) error {
 		return err
 	}
 
-	container := newContainer(daemon)
+	container := newContainer(daemon, this.counter.Add(1))
 	if err := this.chasm.Put(container); err != nil {
 		return err
 	}
 
 	this.factory.trade.Set(id, factory)
 	this.lineage.Set(id, newLineage(trade, &container))
-	return daemon.Run()
+	err = daemon.Run()
+	this.onAdd(daemon)
+	return err
 }
 
 func (this *daemonManager7) AddScheduleProducer(factory ScheduleFactory) error {
@@ -527,14 +545,16 @@ func (this *daemonManager7) AddScheduleProducer(factory ScheduleFactory) error {
 		return err
 	}
 
-	container := newContainer(daemon)
+	container := newContainer(daemon, this.counter.Add(1))
 	if err := this.chasm.Put(container); err != nil {
 		return err
 	}
 
 	this.factory.schedule.Set(id, factory)
 	this.lineage.Set(id, newLineage(schedule, &container))
-	return daemon.Run()
+	err = daemon.Run()
+	this.onAdd(daemon)
+	return err
 }
 
 func (this *daemonManager7) AddPlugin(factory PluginFactory) error {
@@ -550,14 +570,16 @@ func (this *daemonManager7) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	container := newContainer(daemon)
+	container := newContainer(daemon, this.counter.Add(1))
 	if err := this.chasm.Put(container); err != nil {
 		return err
 	}
 
 	this.factory.plugin.Set(id, factory)
 	this.lineage.Set(id, newLineage(plugin, &container))
-	return daemon.Run()
+	err = daemon.Run()
+	this.onAdd(daemon)
+	return err
 }
 
 func (this *daemonManager7) Kill(id uuid.UUID) error {
@@ -575,8 +597,8 @@ func (this *daemonManager7) Kill(id uuid.UUID) error {
 		return err
 	}
 
-	lineage.ptr = nil
-	lineage.alive = false
-	this.lineage.Set(id, lineage)
-	return this.chasm.Delete(container)
+	this.lineage.Set(id, endLineage(lineage))
+	err = this.chasm.Delete(container)
+	this.onKill(container)
+	return err
 }
