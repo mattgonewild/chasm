@@ -99,12 +99,27 @@ type (
 	}
 )
 
-// TODO: ...
 type Config struct {
-	Ctx  context.Context
-	Line int
-	Fact FactoryConfig
-	Reg  RegistryConfig
+	Ctx context.Context
+
+	// Lineage tracks factories seen and entries are not deleted.
+	// This is an initial bucket hint only; maps grow as needed, never shrink.
+	// Per entry ≈ 40 B.
+	Lineage int
+
+	// Factories are kept around forever so daemons can be revived.
+	// Fields are initial bucket hints only; maps grow as needed, never shrink.
+	// Per entry ≈ 32 B.
+	Factory FactoryConfig
+
+	// Fields are initial bucket hints only; registries grow as needed, never shrink.
+	// Per entry ≈ 24 B.
+	Registry RegistryConfig
+
+	// The base-2 exponent (log2) of the backing chasm array. It must be within [7, 34].
+	// This directly limits how many daemons can be loaded at any given time so choose wisely.
+	// The containers that go in are ≈ 32 B. Daemons can be killed and removed as needed.
+	Chasm int
 }
 
 type FactoryConfig struct {
@@ -167,17 +182,17 @@ const (
 )
 
 type lineage struct {
-	domain        domain
-	startUnixTime int64
-	alive         bool
+	domain domain
+	ptr    *container
+	alive  bool
 }
 
-func newLineage(domain domain, startUnixTime int64) lineage {
-	return lineage{domain: domain, startUnixTime: startUnixTime, alive: true}
+func newLineage(domain domain, ptr *container) lineage {
+	return lineage{domain: domain, ptr: ptr, alive: true}
 }
 
-func reviveLineage(lineage lineage, startUnixTime int64) lineage {
-	lineage.startUnixTime = startUnixTime
+func reviveLineage(lineage lineage, ptr *container) lineage {
+	lineage.ptr = ptr
 	lineage.alive = true
 	return lineage
 }
@@ -205,21 +220,39 @@ var (
 	ErrInvalid  = errors.New("matt:chasm::daemon: invalid")
 )
 
-// TODO: ...
 type daemonManager7 struct {
 	lineage   kit.CoarseMap[uuid.UUID, lineage]
 	newDaemon [domainCount]newDaemonFunc
 	_         [16]byte
 	factory   factoryIndex
-	chasm     kit.CoarseSortedSet7[container]
 	registry  brokerageDataLogRegistry
+	chasm     kit.CoarseSortedSet7[container]
 	ctx       context.Context
-	cancel    context.CancelFunc
 	wg        sync.WaitGroup
+	cancel    context.CancelFunc
 }
 
 func newDaemonManager7(cfg Config) *daemonManager7 {
 	manager := new(daemonManager7)
+	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
+	manager.newDaemon[symbol] = manager.newSymbolDaemon
+	manager.newDaemon[book] = manager.newBookDaemon
+	manager.newDaemon[candle] = manager.newCandleDaemon
+	manager.newDaemon[trade] = manager.newTradeDaemon
+	manager.newDaemon[schedule] = manager.newScheduleDaemon
+	manager.newDaemon[plugin] = manager.newPluginDaemon
+	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
+	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
+	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
+	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
+	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
+	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
+	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
+	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
+	kit.InitCoarseRegistry(&manager.registry.trade, cfg.Registry.Trade)
+	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
+	manager.ctx, manager.cancel = context.WithCancel(cfg.Ctx)
 	return manager
 }
 
@@ -254,7 +287,7 @@ func (this *daemonManager7) Revive(id uuid.UUID) error {
 		return err
 	}
 
-	this.lineage.Set(id, reviveLineage(lineage, container.startUnixTime))
+	this.lineage.Set(id, reviveLineage(lineage, &container))
 	return daemon.Run(this.ctx, &this.wg)
 }
 
@@ -337,7 +370,7 @@ func (this *daemonManager7) AddSymbolProducer(factory SymbolFactory) error {
 	}
 
 	this.factory.symbol.Set(id, factory)
-	this.lineage.Set(id, newLineage(symbol, container.startUnixTime))
+	this.lineage.Set(id, newLineage(symbol, &container))
 	return daemon.Run(this.ctx, &this.wg)
 }
 
@@ -360,7 +393,7 @@ func (this *daemonManager7) AddBookProducer(factory BookFactory) error {
 	}
 
 	this.factory.book.Set(id, factory)
-	this.lineage.Set(id, newLineage(book, container.startUnixTime))
+	this.lineage.Set(id, newLineage(book, &container))
 	return daemon.Run(this.ctx, &this.wg)
 }
 
@@ -383,7 +416,7 @@ func (this *daemonManager7) AddCandleProducer(factory CandleFactory) error {
 	}
 
 	this.factory.candle.Set(id, factory)
-	this.lineage.Set(id, newLineage(candle, container.startUnixTime))
+	this.lineage.Set(id, newLineage(candle, &container))
 	return daemon.Run(this.ctx, &this.wg)
 }
 
@@ -406,7 +439,7 @@ func (this *daemonManager7) AddTradeProducer(factory TradeFactory) error {
 	}
 
 	this.factory.trade.Set(id, factory)
-	this.lineage.Set(id, newLineage(trade, container.startUnixTime))
+	this.lineage.Set(id, newLineage(trade, &container))
 	return daemon.Run(this.ctx, &this.wg)
 }
 
@@ -429,7 +462,7 @@ func (this *daemonManager7) AddScheduleProducer(factory ScheduleFactory) error {
 	}
 
 	this.factory.schedule.Set(id, factory)
-	this.lineage.Set(id, newLineage(schedule, container.startUnixTime))
+	this.lineage.Set(id, newLineage(schedule, &container))
 	return daemon.Run(this.ctx, &this.wg)
 }
 
@@ -452,7 +485,7 @@ func (this *daemonManager7) AddPlugin(factory PluginFactory) error {
 	}
 
 	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, container.startUnixTime))
+	this.lineage.Set(id, newLineage(plugin, &container))
 	return daemon.Run(this.ctx, &this.wg)
 }
 
@@ -462,16 +495,16 @@ func (this *daemonManager7) Kill(id uuid.UUID) error {
 		return err
 	}
 
-	container := container{startUnixTime: lineage.startUnixTime}
-	container, err = this.chasm.Get(container)
-	if err != nil {
-		return err
+	if !lineage.alive {
+		return ErrInvalid
 	}
 
+	container := *lineage.ptr
 	if err := container.Shutdown(); err != nil {
 		return err
 	}
 
+	lineage.ptr = nil
 	lineage.alive = false
 	this.lineage.Set(id, lineage)
 	return this.chasm.Delete(container)
