@@ -8,36 +8,36 @@ import (
 type (
 	Registry[T any] = common.Registry[Key, T]
 
-	BookEventLogRegistry     = Registry[common.Log[BookEvent]]
-	CandleEventLogRegistry   = Registry[common.Log[CandleEvent]]
-	TradeEventLogRegistry    = Registry[common.Log[TradeEvent]]
-	SymbolEventLogRegistry   = Registry[common.Log[SymbolEvent]]
-	ScheduleEventLogRegistry = Registry[common.Log[ScheduleEvent]]
+	SymbolLogRegistry   = Registry[common.Log[SymbolEvent]]
+	BookLogRegistry     = Registry[common.Log[BookEvent]]
+	CandleLogRegistry   = Registry[common.Log[CandleEvent]]
+	TradeLogRegistry    = Registry[common.Log[TradeEvent]]
+	ScheduleLogRegistry = Registry[common.Log[ScheduleEvent]]
 
-	BrokerageDataEventLogRegistry interface {
-		Book() BookEventLogRegistry
-		Candle() CandleEventLogRegistry
-		Trade() TradeEventLogRegistry
-		Symbol() SymbolEventLogRegistry
-		Schedule() ScheduleEventLogRegistry
+	BrokerageDataLogRegistry interface {
+		Symbol() SymbolLogRegistry
+		Book() BookLogRegistry
+		Candle() CandleLogRegistry
+		Trade() TradeLogRegistry
+		Schedule() ScheduleLogRegistry
 	}
 )
 
-type brokerageDataEventLogRegistry struct {
+type brokerageDataLogRegistry struct {
+	symbol   kit.CoarseRegistry[Key, common.Log[SymbolEvent]]
+	_        [32]byte
 	book     kit.CoarseRegistry[Key, common.Log[BookEvent]]
 	_        [32]byte
 	candle   kit.CoarseRegistry[Key, common.Log[CandleEvent]]
 	_        [32]byte
 	trade    kit.CoarseRegistry[Key, common.Log[TradeEvent]]
 	_        [32]byte
-	symbol   kit.CoarseRegistry[Key, common.Log[SymbolEvent]]
-	_        [32]byte
 	schedule kit.CoarseRegistry[Key, common.Log[ScheduleEvent]]
 	_        [32]byte
 }
 
-func (this *brokerageDataEventLogRegistry) Book() BookEventLogRegistry         { return &this.book }
-func (this *brokerageDataEventLogRegistry) Candle() CandleEventLogRegistry     { return &this.candle }
-func (this *brokerageDataEventLogRegistry) Trade() TradeEventLogRegistry       { return &this.trade }
-func (this *brokerageDataEventLogRegistry) Symbol() SymbolEventLogRegistry     { return &this.symbol }
-func (this *brokerageDataEventLogRegistry) Schedule() ScheduleEventLogRegistry { return &this.schedule }
+func (this *brokerageDataLogRegistry) Symbol() SymbolLogRegistry     { return &this.symbol }
+func (this *brokerageDataLogRegistry) Book() BookLogRegistry         { return &this.book }
+func (this *brokerageDataLogRegistry) Candle() CandleLogRegistry     { return &this.candle }
+func (this *brokerageDataLogRegistry) Trade() TradeLogRegistry       { return &this.trade }
+func (this *brokerageDataLogRegistry) Schedule() ScheduleLogRegistry { return &this.schedule }

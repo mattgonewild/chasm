@@ -2,6 +2,8 @@ package chasm
 
 import (
 	"context"
+	"errors"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/mattgonewild/common"
@@ -14,8 +16,8 @@ type (
 
 	Daemon interface {
 		Configurable
-		Run(ctx context.Context) error
-		Shutdown(ctx context.Context) error
+		Run(ctx context.Context, wg *sync.WaitGroup) error
+		Shutdown() error
 		Pause() error
 		Resume() error
 		Restart() error
@@ -23,7 +25,6 @@ type (
 	}
 
 	DaemonInfo interface {
-		Identifiable
 		Name() string
 		Config() []byte
 		Status() (int, int64)
@@ -32,35 +33,7 @@ type (
 		FactoryInfo() FactoryInfo
 	}
 
-	Plugin[T common.UnixTimestamped] interface {
-		Daemon
-		Initialize(provider Provider[T]) error
-	}
-
-	Producer[T any] interface {
-		Daemon
-		Initialize(registry Registry[T]) error
-	}
-
-	Control[T any] interface {
-		Producer[T]
-		WithLinker(linker IngressDataLinker) Control[T]
-		WithUnlinker(unlinker IngressDataUnlinker) Control[T]
-	}
-
-	IngressDataLinker interface {
-		AddBookProducer(BookProducerFactory) error
-		AddCandleProducer(CandleProducerFactory) error
-		AddTradeProducer(TradeProducerFactory) error
-	}
-
-	IngressDataUnlinker interface {
-		RemoveBookProducer(id uuid.UUID) error
-		RemoveCandleProducer(id uuid.UUID) error
-		RemoveTradeProducer(id uuid.UUID) error
-	}
-
-	DaemonFactory[T Daemon] interface {
+	Factory[T Daemon] interface {
 		New() T
 		FactoryInfo
 	}
@@ -70,12 +43,41 @@ type (
 		Version() (int, int, int)
 	}
 
-	SymbolWatchDogFactory   = DaemonFactory[Control[common.Log[SymbolEvent]]]
-	BookProducerFactory     = DaemonFactory[Producer[common.Log[BookEvent]]]
-	CandleProducerFactory   = DaemonFactory[Producer[common.Log[CandleEvent]]]
-	TradeProducerFactory    = DaemonFactory[Producer[common.Log[TradeEvent]]]
-	BrokeragePluginFactory  = DaemonFactory[Plugin[BrokerageData]]
-	ScheduleProducerFactory = DaemonFactory[Producer[common.Log[ScheduleEvent]]]
+	SymbolFactory   = Factory[Control[common.Log[SymbolEvent]]]
+	BookFactory     = Factory[Producer[common.Log[BookEvent]]]
+	CandleFactory   = Factory[Producer[common.Log[CandleEvent]]]
+	TradeFactory    = Factory[Producer[common.Log[TradeEvent]]]
+	ScheduleFactory = Factory[Producer[common.Log[ScheduleEvent]]]
+	PluginFactory   = Factory[Plugin[BrokerageData]]
+
+	Control[T any] interface {
+		Producer[T]
+		WithLinker(linker Linker) Control[T]
+		WithUnlinker(unlinker Unlinker) Control[T]
+	}
+
+	Linker interface {
+		AddSymbolProducer(SymbolFactory) error
+		AddBookProducer(BookFactory) error
+		AddCandleProducer(CandleFactory) error
+		AddTradeProducer(TradeFactory) error
+		AddScheduleProducer(ScheduleFactory) error
+		AddPlugin(PluginFactory) error
+	}
+
+	Unlinker interface {
+		Kill(id uuid.UUID) error
+	}
+
+	Producer[T any] interface {
+		Daemon
+		Initialize(registry Registry[T]) error
+	}
+
+	Plugin[T common.UnixTimestamped] interface {
+		Daemon
+		Initialize(provider Provider[T]) error
+	}
 
 	Manager interface {
 		Run(ctx context.Context) error
@@ -92,78 +94,385 @@ type (
 		Get(id uuid.UUID) (Daemon, error)
 		Revive(id uuid.UUID) error
 
-		AddPlugin(BrokeragePluginFactory) error
-		RemovePlugin(id uuid.UUID) error
-		AddSymbolWatchDog(SymbolWatchDogFactory) error
-		RemoveSymbolWatchDog(id uuid.UUID) error
-		AddScheduleProducer(ScheduleProducerFactory) error
-		RemoveScheduleProducer(id uuid.UUID) error
+		Linker
+		Unlinker
 	}
 )
 
+// TODO: ...
 type Config struct {
-	Factory  int
+	Ctx  context.Context
+	Line int
+	Fact FactoryConfig
+	Reg  RegistryConfig
+}
+
+type FactoryConfig struct {
+	Symbol   int
 	Book     int
 	Candle   int
 	Trade    int
+	Schedule int
+	Plugin   int
+}
+
+type RegistryConfig struct {
 	Symbol   int
+	Book     int
+	Candle   int
+	Trade    int
 	Schedule int
 }
 
-type daemonManager struct {
-	daemon   kit.CoarseSortedSet13[daemonContainer]
-	factory  kit.CoarseMap[uuid.UUID, DaemonFactory[Daemon]]
-	_        [32]byte
-	registry brokerageDataEventLogRegistry
+func NewManager(cfg Config) Manager {
+	return nil
 }
 
-func NewManager(cfg Config) Manager {
-	manager := new(daemonManager)
-	kit.InitCoarseMap(&manager.factory, cfg.Factory)
-	kit.InitCoarseRegistry(&manager.registry.book, cfg.Book)
-	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Candle)
-	kit.InitCoarseRegistry(&manager.registry.trade, cfg.Trade)
-	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Symbol)
-	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Schedule)
+type container struct {
+	Daemon
+	startUnixTime int64
+	hidden        bool
+}
+
+func newContainer(daemon Daemon) container {
+	return container{Daemon: daemon, startUnixTime: kit.UnixNano()}
+}
+
+func (this container) Before(that container) bool {
+	return this.startUnixTime < that.startUnixTime
+}
+
+func (this container) Equal(that container) bool {
+	return this.startUnixTime == that.startUnixTime
+}
+
+func (this container) After(that container) bool {
+	return this.startUnixTime > that.startUnixTime
+}
+
+func (this container) Compare(that container) int {
+	return kit.BoolToInt(this.startUnixTime > that.startUnixTime) - kit.BoolToInt(this.startUnixTime < that.startUnixTime)
+}
+
+type domain uint
+
+const (
+	symbol domain = iota
+	book
+	candle
+	trade
+	schedule
+	plugin
+	domainCount
+)
+
+type lineage struct {
+	domain        domain
+	startUnixTime int64
+	alive         bool
+}
+
+func newLineage(domain domain, startUnixTime int64) lineage {
+	return lineage{domain: domain, startUnixTime: startUnixTime, alive: true}
+}
+
+func reviveLineage(lineage lineage, startUnixTime int64) lineage {
+	lineage.startUnixTime = startUnixTime
+	lineage.alive = true
+	return lineage
+}
+
+type factoryIndex struct {
+	symbol   kit.CoarseMap[uuid.UUID, SymbolFactory]
+	_        [32]byte
+	book     kit.CoarseMap[uuid.UUID, BookFactory]
+	_        [32]byte
+	candle   kit.CoarseMap[uuid.UUID, CandleFactory]
+	_        [32]byte
+	trade    kit.CoarseMap[uuid.UUID, TradeFactory]
+	_        [32]byte
+	schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
+	_        [32]byte
+	plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+	_        [32]byte
+}
+
+type newDaemonFunc func(id uuid.UUID) (Daemon, error)
+
+var (
+	ErrNotFound = errors.New("matt:chasm::daemon: not found")
+	ErrLocked   = errors.New("matt:chasm::daemon: locked")
+	ErrInvalid  = errors.New("matt:chasm::daemon: invalid")
+)
+
+// TODO: ...
+type daemonManager7 struct {
+	lineage   kit.CoarseMap[uuid.UUID, lineage]
+	newDaemon [domainCount]newDaemonFunc
+	_         [16]byte
+	factory   factoryIndex
+	chasm     kit.CoarseSortedSet7[container]
+	registry  brokerageDataLogRegistry
+	ctx       context.Context
+	cancel    context.CancelFunc
+	wg        sync.WaitGroup
+}
+
+func newDaemonManager7(cfg Config) *daemonManager7 {
+	manager := new(daemonManager7)
 	return manager
 }
 
-func (this *daemonManager) Run(ctx context.Context) error
-func (this *daemonManager) Shutdown(ctx context.Context) error
+func (this *daemonManager7) Run(ctx context.Context) error
+func (this *daemonManager7) Shutdown(ctx context.Context) error
+func (this *daemonManager7) Pause(hidden bool, filter func(DaemonInfo) bool) error
+func (this *daemonManager7) Resume(hidden bool, filter func(DaemonInfo) bool) error
+func (this *daemonManager7) Restart(hidden bool, filter func(DaemonInfo) bool) error
+func (this *daemonManager7) Report(hidden bool, filter func(DaemonInfo) bool) []byte { return nil }
+func (this *daemonManager7) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) ([]DaemonInfo, error)
+func (this *daemonManager7) Hide(id uuid.UUID, note string) error
+func (this *daemonManager7) Show(id uuid.UUID) error
+func (this *daemonManager7) Get(id uuid.UUID) (Daemon, error)
 
-func (this *daemonManager) Pause(hidden bool, filter func(DaemonInfo) bool) error
+func (this *daemonManager7) Revive(id uuid.UUID) error {
+	lineage, err := this.lineage.Get(id)
+	if err != nil {
+		return ErrNotFound
+	}
 
-func (this *daemonManager) Resume(hidden bool, filter func(DaemonInfo) bool) error
-func (this *daemonManager) Restart(hidden bool, filter func(DaemonInfo) bool) error
-func (this *daemonManager) Report(hidden bool, filter func(DaemonInfo) bool) []byte { return nil }
-func (this *daemonManager) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) ([]DaemonInfo, error)
+	if lineage.alive {
+		return ErrLocked
+	}
 
-func (this *daemonManager) Hide(id uuid.UUID, note string) error
-func (this *daemonManager) Show(id uuid.UUID) error
-func (this *daemonManager) Get(id uuid.UUID) (Daemon, error)
-func (this *daemonManager) Revive(id uuid.UUID) error
+	daemon, err := this.newDaemon[lineage.domain](id)
+	if err != nil {
+		return err
+	}
 
-func (this *daemonManager) AddPlugin(factory BrokeragePluginFactory) error
-func (this *daemonManager) RemovePlugin(id uuid.UUID) error
-func (this *daemonManager) AddSymbolWatchDog(factory SymbolWatchDogFactory) error
-func (this *daemonManager) RemoveSymbolWatchDog(id uuid.UUID) error
-func (this *daemonManager) AddScheduleProducer(factory ScheduleProducerFactory) error
-func (this *daemonManager) RemoveScheduleProducer(id uuid.UUID) error
+	container := newContainer(daemon)
+	if err := this.chasm.Put(container); err != nil {
+		return err
+	}
 
-func (this *daemonManager) AddBookProducer(factory BookProducerFactory) error
-func (this *daemonManager) AddCandleProducer(factory CandleProducerFactory) error
-func (this *daemonManager) AddTradeProducer(factory TradeProducerFactory) error
-func (this *daemonManager) RemoveBookProducer(id uuid.UUID) error
-func (this *daemonManager) RemoveCandleProducer(id uuid.UUID) error
-func (this *daemonManager) RemoveTradeProducer(id uuid.UUID) error
-
-type daemonContainer struct {
-	Daemon
-	hidden bool
-	note   string
+	this.lineage.Set(id, reviveLineage(lineage, container.startUnixTime))
+	return daemon.Run(this.ctx, &this.wg)
 }
 
-func (this daemonContainer) Before(that daemonContainer) bool
-func (this daemonContainer) Equal(that daemonContainer) bool
-func (this daemonContainer) After(that daemonContainer) bool
-func (this daemonContainer) Compare(that daemonContainer) int
+func (this *daemonManager7) newSymbolDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.symbol.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	daemon := factory.New().WithLinker(this).WithUnlinker(this)
+	return daemon, daemon.Initialize(this.registry.Symbol())
+}
+
+func (this *daemonManager7) newBookDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.book.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	daemon := factory.New()
+	return daemon, daemon.Initialize(this.registry.Book())
+}
+
+func (this *daemonManager7) newCandleDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.candle.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	daemon := factory.New()
+	return daemon, daemon.Initialize(this.registry.Candle())
+}
+
+func (this *daemonManager7) newTradeDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.trade.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	daemon := factory.New()
+	return daemon, daemon.Initialize(this.registry.Trade())
+}
+
+func (this *daemonManager7) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.schedule.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	daemon := factory.New()
+	return daemon, daemon.Initialize(this.registry.Schedule())
+}
+
+func (this *daemonManager7) newPluginDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.plugin.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	daemon := factory.New()
+	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
+}
+
+func (this *daemonManager7) AddSymbolProducer(factory SymbolFactory) error {
+	id := factory.ID()
+
+	_, err := this.lineage.Get(id)
+	if err == nil {
+		return ErrInvalid
+	}
+
+	daemon := factory.New().WithLinker(this).WithUnlinker(this)
+	if err := daemon.Initialize(this.registry.Symbol()); err != nil {
+		return err
+	}
+
+	container := newContainer(daemon)
+	if err := this.chasm.Put(container); err != nil {
+		return err
+	}
+
+	this.factory.symbol.Set(id, factory)
+	this.lineage.Set(id, newLineage(symbol, container.startUnixTime))
+	return daemon.Run(this.ctx, &this.wg)
+}
+
+func (this *daemonManager7) AddBookProducer(factory BookFactory) error {
+	id := factory.ID()
+
+	_, err := this.lineage.Get(id)
+	if err == nil {
+		return ErrInvalid
+	}
+
+	daemon := factory.New()
+	if err := daemon.Initialize(this.registry.Book()); err != nil {
+		return err
+	}
+
+	container := newContainer(daemon)
+	if err := this.chasm.Put(container); err != nil {
+		return err
+	}
+
+	this.factory.book.Set(id, factory)
+	this.lineage.Set(id, newLineage(book, container.startUnixTime))
+	return daemon.Run(this.ctx, &this.wg)
+}
+
+func (this *daemonManager7) AddCandleProducer(factory CandleFactory) error {
+	id := factory.ID()
+
+	_, err := this.lineage.Get(id)
+	if err == nil {
+		return ErrInvalid
+	}
+
+	daemon := factory.New()
+	if err := daemon.Initialize(this.registry.Candle()); err != nil {
+		return err
+	}
+
+	container := newContainer(daemon)
+	if err := this.chasm.Put(container); err != nil {
+		return err
+	}
+
+	this.factory.candle.Set(id, factory)
+	this.lineage.Set(id, newLineage(candle, container.startUnixTime))
+	return daemon.Run(this.ctx, &this.wg)
+}
+
+func (this *daemonManager7) AddTradeProducer(factory TradeFactory) error {
+	id := factory.ID()
+
+	_, err := this.lineage.Get(id)
+	if err == nil {
+		return ErrInvalid
+	}
+
+	daemon := factory.New()
+	if err := daemon.Initialize(this.registry.Trade()); err != nil {
+		return err
+	}
+
+	container := newContainer(daemon)
+	if err := this.chasm.Put(container); err != nil {
+		return err
+	}
+
+	this.factory.trade.Set(id, factory)
+	this.lineage.Set(id, newLineage(trade, container.startUnixTime))
+	return daemon.Run(this.ctx, &this.wg)
+}
+
+func (this *daemonManager7) AddScheduleProducer(factory ScheduleFactory) error {
+	id := factory.ID()
+
+	_, err := this.lineage.Get(id)
+	if err == nil {
+		return ErrInvalid
+	}
+
+	daemon := factory.New()
+	if err := daemon.Initialize(this.registry.Schedule()); err != nil {
+		return err
+	}
+
+	container := newContainer(daemon)
+	if err := this.chasm.Put(container); err != nil {
+		return err
+	}
+
+	this.factory.schedule.Set(id, factory)
+	this.lineage.Set(id, newLineage(schedule, container.startUnixTime))
+	return daemon.Run(this.ctx, &this.wg)
+}
+
+func (this *daemonManager7) AddPlugin(factory PluginFactory) error {
+	id := factory.ID()
+
+	_, err := this.lineage.Get(id)
+	if err == nil {
+		return ErrInvalid
+	}
+
+	daemon := factory.New()
+	if err := daemon.Initialize(newBrokerageDataProvider(&this.registry)); err != nil {
+		return err
+	}
+
+	container := newContainer(daemon)
+	if err := this.chasm.Put(container); err != nil {
+		return err
+	}
+
+	this.factory.plugin.Set(id, factory)
+	this.lineage.Set(id, newLineage(plugin, container.startUnixTime))
+	return daemon.Run(this.ctx, &this.wg)
+}
+
+func (this *daemonManager7) Kill(id uuid.UUID) error {
+	lineage, err := this.lineage.Get(id)
+	if err != nil {
+		return err
+	}
+
+	container := container{startUnixTime: lineage.startUnixTime}
+	container, err = this.chasm.Get(container)
+	if err != nil {
+		return err
+	}
+
+	if err := container.Shutdown(); err != nil {
+		return err
+	}
+
+	lineage.alive = false
+	this.lineage.Set(id, lineage)
+	return this.chasm.Delete(container)
+}

@@ -2,5 +2,5 @@ github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/mattgonewild/common v0.15.4 h1:4ji8TcICM2RoKkkZXUYZ3HIojk5FtMJV7ZRJl6Qc8NE=
 github.com/mattgonewild/common v0.15.4/go.mod h1:9QJFJk2vI8JZN8yfp06d0+vaxSXWw+tZojpchcZTy7Y=
-github.com/mattgonewild/kit v0.3.0 h1:1zEoEm29bhWSZJ67ETLIu5PGa2Rz8HQ7q8G9kfs/GGE=
-github.com/mattgonewild/kit v0.3.0/go.mod h1:cS1oOA885rXmrRWIdspz7xuPyE57DcWWyvK1Y3+/JjA=
+github.com/mattgonewild/kit v0.5.0 h1:2FDB905avQqrQUNKoHGMnHkS/vqU3SiI1sp5f/OyVUg=
+github.com/mattgonewild/kit v0.5.0/go.mod h1:cS1oOA885rXmrRWIdspz7xuPyE57DcWWyvK1Y3+/JjA=

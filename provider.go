@@ -21,10 +21,10 @@ type (
 	}
 
 	BrokerageDataReader interface {
+		Symbol(key Key) (common.Cursor[SymbolEvent], error)
 		Book(key Key) (common.Cursor[BookEvent], error)
 		Candle(key Key) (common.Cursor[CandleEvent], error)
 		Trade(key Key) (common.Cursor[TradeEvent], error)
-		Symbol(key Key) (common.Cursor[SymbolEvent], error)
 		Schedule(key Key) (common.Cursor[ScheduleEvent], error)
 	}
 
@@ -32,10 +32,10 @@ type (
 )
 
 type brokerageDataProvider struct {
-	registry BrokerageDataEventLogRegistry
+	registry BrokerageDataLogRegistry
 }
 
-func newBrokerageDataProvider(registry BrokerageDataEventLogRegistry) BrokerageDataProvider {
+func newBrokerageDataProvider(registry BrokerageDataLogRegistry) BrokerageDataProvider {
 	return &brokerageDataProvider{
 		registry: registry,
 	}
@@ -44,10 +44,10 @@ func newBrokerageDataProvider(registry BrokerageDataEventLogRegistry) BrokerageD
 func (this *brokerageDataProvider) Get() BrokerageData { return newBrokerageData(this.registry) }
 
 type brokerageData struct {
-	registry BrokerageDataEventLogRegistry
+	registry BrokerageDataLogRegistry
 }
 
-func newBrokerageData(registry BrokerageDataEventLogRegistry) BrokerageData {
+func newBrokerageData(registry BrokerageDataLogRegistry) BrokerageData {
 	return &brokerageData{
 		registry: registry,
 	}
@@ -58,10 +58,10 @@ func (this *brokerageData) Before(endUnixTime int64) BrokerageDataReader {
 		this.registry,
 		endUnixTime,
 
+		newCursorBeforeFunc[SymbolEvent](),
 		newCursorBeforeFunc[BookEvent](),
 		newCursorBeforeFunc[CandleEvent](),
 		newCursorBeforeFunc[TradeEvent](),
-		newCursorBeforeFunc[SymbolEvent](),
 		newCursorBeforeFunc[ScheduleEvent](),
 	)
 }
@@ -71,10 +71,10 @@ func (this *brokerageData) At(floorUnixTime int64) BrokerageDataReader {
 		this.registry,
 		floorUnixTime,
 
+		newCursorAtFunc[SymbolEvent](),
 		newCursorAtFunc[BookEvent](),
 		newCursorAtFunc[CandleEvent](),
 		newCursorAtFunc[TradeEvent](),
-		newCursorAtFunc[SymbolEvent](),
 		newCursorAtFunc[ScheduleEvent](),
 	)
 }
@@ -84,10 +84,10 @@ func (this *brokerageData) After(startUnixTime int64) BrokerageDataReader {
 		this.registry,
 		startUnixTime,
 
+		newCursorAfterFunc[SymbolEvent](),
 		newCursorAfterFunc[BookEvent](),
 		newCursorAfterFunc[CandleEvent](),
 		newCursorAfterFunc[TradeEvent](),
-		newCursorAfterFunc[SymbolEvent](),
 		newCursorAfterFunc[ScheduleEvent](),
 	)
 }
@@ -95,36 +95,45 @@ func (this *brokerageData) After(startUnixTime int64) BrokerageDataReader {
 func (this *brokerageData) UnixNano() int64 { return time.Now().UnixNano() }
 
 type brokerageDataReader struct {
-	registry      BrokerageDataEventLogRegistry
+	registry      BrokerageDataLogRegistry
 	boundUnixTime int64
 
+	newSymbolCursor   newCursorFunc[SymbolEvent]
 	newBookCursor     newCursorFunc[BookEvent]
 	newCandleCursor   newCursorFunc[CandleEvent]
 	newTradeCursor    newCursorFunc[TradeEvent]
-	newSymbolCursor   newCursorFunc[SymbolEvent]
 	newScheduleCursor newCursorFunc[ScheduleEvent]
 }
 
 func newBrokerageDataReader(
-	registry BrokerageDataEventLogRegistry,
+	registry BrokerageDataLogRegistry,
 	boundUnixTime int64,
 
+	newSymbolCursor newCursorFunc[SymbolEvent],
 	newBookCursor newCursorFunc[BookEvent],
 	newCandleCursor newCursorFunc[CandleEvent],
 	newTradeCursor newCursorFunc[TradeEvent],
-	newSymbolCursor newCursorFunc[SymbolEvent],
 	newScheduleCursor newCursorFunc[ScheduleEvent],
 ) BrokerageDataReader {
 	return &brokerageDataReader{
 		registry:      registry,
 		boundUnixTime: boundUnixTime,
 
+		newSymbolCursor:   newSymbolCursor,
 		newBookCursor:     newBookCursor,
 		newCandleCursor:   newCandleCursor,
 		newTradeCursor:    newTradeCursor,
-		newSymbolCursor:   newSymbolCursor,
 		newScheduleCursor: newScheduleCursor,
 	}
+}
+
+func (this *brokerageDataReader) Symbol(key Key) (common.Cursor[SymbolEvent], error) {
+	log, err := this.registry.Symbol().Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return this.newSymbolCursor(log, this.boundUnixTime)
 }
 
 func (this *brokerageDataReader) Book(key Key) (common.Cursor[BookEvent], error) {
@@ -152,15 +161,6 @@ func (this *brokerageDataReader) Trade(key Key) (common.Cursor[TradeEvent], erro
 	}
 
 	return this.newTradeCursor(log, this.boundUnixTime)
-}
-
-func (this *brokerageDataReader) Symbol(key Key) (common.Cursor[SymbolEvent], error) {
-	log, err := this.registry.Symbol().Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return this.newSymbolCursor(log, this.boundUnixTime)
 }
 
 func (this *brokerageDataReader) Schedule(key Key) (common.Cursor[ScheduleEvent], error) {
