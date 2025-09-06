@@ -1,9 +1,7 @@
 package chasm
 
 import (
-	"context"
 	"errors"
-	"sync"
 
 	"github.com/google/uuid"
 	"github.com/mattgonewild/common"
@@ -16,7 +14,7 @@ type (
 
 	Daemon interface {
 		Configurable
-		Run(ctx context.Context, wg *sync.WaitGroup) error
+		Run() error
 		Shutdown() error
 		Pause() error
 		Resume() error
@@ -80,28 +78,21 @@ type (
 	}
 
 	Manager interface {
-		Run(ctx context.Context) error
-		Shutdown(ctx context.Context) error
-
+		Shutdown() error
 		Pause(hidden bool, filter func(DaemonInfo) bool) error
 		Resume(hidden bool, filter func(DaemonInfo) bool) error
 		Restart(hidden bool, filter func(DaemonInfo) bool) error
-		Report(hidden bool, filter func(DaemonInfo) bool) []byte
-		DaemonInfo(hidden bool, filter func(DaemonInfo) bool) ([]DaemonInfo, error)
-
-		Hide(id uuid.UUID, note string) error
+		DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo
+		Hide(id uuid.UUID) error
 		Show(id uuid.UUID) error
 		Get(id uuid.UUID) (Daemon, error)
 		Revive(id uuid.UUID) error
-
 		Linker
 		Unlinker
 	}
 )
 
 type Config struct {
-	Ctx context.Context
-
 	// Lineage tracks factories seen and entries are not deleted.
 	// This is an initial bucket hint only; maps grow as needed, never shrink.
 	// Per entry ≈ 40 B.
@@ -143,32 +134,6 @@ func NewManager(cfg Config) Manager {
 	return nil
 }
 
-type container struct {
-	Daemon
-	startUnixTime int64
-	hidden        bool
-}
-
-func newContainer(daemon Daemon) container {
-	return container{Daemon: daemon, startUnixTime: kit.UnixNano()}
-}
-
-func (this container) Before(that container) bool {
-	return this.startUnixTime < that.startUnixTime
-}
-
-func (this container) Equal(that container) bool {
-	return this.startUnixTime == that.startUnixTime
-}
-
-func (this container) After(that container) bool {
-	return this.startUnixTime > that.startUnixTime
-}
-
-func (this container) Compare(that container) int {
-	return kit.BoolToInt(this.startUnixTime > that.startUnixTime) - kit.BoolToInt(this.startUnixTime < that.startUnixTime)
-}
-
 type domain uint
 
 const (
@@ -197,39 +162,59 @@ func reviveLineage(lineage lineage, ptr *container) lineage {
 	return lineage
 }
 
-type factoryIndex struct {
-	symbol   kit.CoarseMap[uuid.UUID, SymbolFactory]
-	_        [32]byte
-	book     kit.CoarseMap[uuid.UUID, BookFactory]
-	_        [32]byte
-	candle   kit.CoarseMap[uuid.UUID, CandleFactory]
-	_        [32]byte
-	trade    kit.CoarseMap[uuid.UUID, TradeFactory]
-	_        [32]byte
-	schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
-	_        [32]byte
-	plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
-	_        [32]byte
+type container struct {
+	Daemon
+	startUnixTime int64
+	hidden        bool
+}
+
+func newContainer(daemon Daemon) container {
+	return container{Daemon: daemon, startUnixTime: kit.UnixNano()}
+}
+
+func (this container) Before(that container) bool {
+	return this.startUnixTime < that.startUnixTime
+}
+
+func (this container) Equal(that container) bool {
+	return this.startUnixTime == that.startUnixTime
+}
+
+func (this container) After(that container) bool {
+	return this.startUnixTime > that.startUnixTime
+}
+
+func (this container) Compare(that container) int {
+	return kit.BoolToInt(this.startUnixTime > that.startUnixTime) - kit.BoolToInt(this.startUnixTime < that.startUnixTime)
 }
 
 type newDaemonFunc func(id uuid.UUID) (Daemon, error)
 
 var (
-	ErrNotFound = errors.New("matt:chasm::daemon: not found")
-	ErrLocked   = errors.New("matt:chasm::daemon: locked")
-	ErrInvalid  = errors.New("matt:chasm::daemon: invalid")
+	ErrInvalid = errors.New("matt:chasm::daemon: invalid")
+	ErrLocked  = errors.New("matt:chasm::daemon: locked")
 )
 
 type daemonManager7 struct {
 	lineage   kit.CoarseMap[uuid.UUID, lineage]
 	newDaemon [domainCount]newDaemonFunc
 	_         [16]byte
-	factory   factoryIndex
-	registry  brokerageDataLogRegistry
-	chasm     kit.CoarseSortedSet7[container]
-	ctx       context.Context
-	wg        sync.WaitGroup
-	cancel    context.CancelFunc
+	factory   struct {
+		symbol   kit.CoarseMap[uuid.UUID, SymbolFactory]
+		_        [32]byte
+		book     kit.CoarseMap[uuid.UUID, BookFactory]
+		_        [32]byte
+		candle   kit.CoarseMap[uuid.UUID, CandleFactory]
+		_        [32]byte
+		trade    kit.CoarseMap[uuid.UUID, TradeFactory]
+		_        [32]byte
+		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
+		_        [32]byte
+		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		_        [32]byte
+	}
+	registry brokerageDataLogRegistry
+	chasm    kit.CoarseSortedSet7[container]
 }
 
 func newDaemonManager7(cfg Config) *daemonManager7 {
@@ -252,25 +237,111 @@ func newDaemonManager7(cfg Config) *daemonManager7 {
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
 	kit.InitCoarseRegistry(&manager.registry.trade, cfg.Registry.Trade)
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
-	manager.ctx, manager.cancel = context.WithCancel(cfg.Ctx)
 	return manager
 }
 
-func (this *daemonManager7) Run(ctx context.Context) error
-func (this *daemonManager7) Shutdown(ctx context.Context) error
-func (this *daemonManager7) Pause(hidden bool, filter func(DaemonInfo) bool) error
-func (this *daemonManager7) Resume(hidden bool, filter func(DaemonInfo) bool) error
-func (this *daemonManager7) Restart(hidden bool, filter func(DaemonInfo) bool) error
-func (this *daemonManager7) Report(hidden bool, filter func(DaemonInfo) bool) []byte { return nil }
-func (this *daemonManager7) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) ([]DaemonInfo, error)
-func (this *daemonManager7) Hide(id uuid.UUID, note string) error
-func (this *daemonManager7) Show(id uuid.UUID) error
-func (this *daemonManager7) Get(id uuid.UUID) (Daemon, error)
+func (this *daemonManager7) Shutdown() (err error) {
+	for container := range this.chasm.All() {
+		err = errors.Join(err, container.Shutdown())
+	}
+
+	return err
+}
+
+func (this *daemonManager7) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+	for container := range this.chasm.All() {
+		if container.hidden == hidden {
+			if filter(container) {
+				err = errors.Join(err, container.Pause())
+			}
+		}
+	}
+
+	return err
+}
+
+func (this *daemonManager7) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+	for container := range this.chasm.All() {
+		if container.hidden == hidden {
+			if filter(container) {
+				err = errors.Join(err, container.Resume())
+			}
+		}
+	}
+
+	return err
+}
+
+func (this *daemonManager7) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+	for container := range this.chasm.All() {
+		if container.hidden == hidden {
+			if filter(container) {
+				err = errors.Join(err, container.Restart())
+			}
+		}
+	}
+
+	return err
+}
+
+func (this *daemonManager7) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, hint)
+	for container := range this.chasm.All() {
+		if container.hidden == hidden {
+			if filter(container) {
+				info = append(info, container)
+			}
+		}
+	}
+
+	return info
+}
+
+func (this *daemonManager7) Hide(id uuid.UUID) error {
+	lineage, err := this.lineage.Get(id)
+	if err != nil {
+		return err
+	}
+
+	if !lineage.alive {
+		return ErrInvalid
+	}
+
+	lineage.ptr.hidden = true
+	return nil
+}
+
+func (this *daemonManager7) Show(id uuid.UUID) error {
+	lineage, err := this.lineage.Get(id)
+	if err != nil {
+		return err
+	}
+
+	if !lineage.alive {
+		return ErrInvalid
+	}
+
+	lineage.ptr.hidden = false
+	return nil
+}
+
+func (this *daemonManager7) Get(id uuid.UUID) (Daemon, error) {
+	lineage, err := this.lineage.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if !lineage.alive {
+		return nil, ErrInvalid
+	}
+
+	return lineage.ptr.Daemon, nil
+}
 
 func (this *daemonManager7) Revive(id uuid.UUID) error {
 	lineage, err := this.lineage.Get(id)
 	if err != nil {
-		return ErrNotFound
+		return err
 	}
 
 	if lineage.alive {
@@ -288,7 +359,7 @@ func (this *daemonManager7) Revive(id uuid.UUID) error {
 	}
 
 	this.lineage.Set(id, reviveLineage(lineage, &container))
-	return daemon.Run(this.ctx, &this.wg)
+	return daemon.Run()
 }
 
 func (this *daemonManager7) newSymbolDaemon(id uuid.UUID) (Daemon, error) {
@@ -371,7 +442,7 @@ func (this *daemonManager7) AddSymbolProducer(factory SymbolFactory) error {
 
 	this.factory.symbol.Set(id, factory)
 	this.lineage.Set(id, newLineage(symbol, &container))
-	return daemon.Run(this.ctx, &this.wg)
+	return daemon.Run()
 }
 
 func (this *daemonManager7) AddBookProducer(factory BookFactory) error {
@@ -394,7 +465,7 @@ func (this *daemonManager7) AddBookProducer(factory BookFactory) error {
 
 	this.factory.book.Set(id, factory)
 	this.lineage.Set(id, newLineage(book, &container))
-	return daemon.Run(this.ctx, &this.wg)
+	return daemon.Run()
 }
 
 func (this *daemonManager7) AddCandleProducer(factory CandleFactory) error {
@@ -417,7 +488,7 @@ func (this *daemonManager7) AddCandleProducer(factory CandleFactory) error {
 
 	this.factory.candle.Set(id, factory)
 	this.lineage.Set(id, newLineage(candle, &container))
-	return daemon.Run(this.ctx, &this.wg)
+	return daemon.Run()
 }
 
 func (this *daemonManager7) AddTradeProducer(factory TradeFactory) error {
@@ -440,7 +511,7 @@ func (this *daemonManager7) AddTradeProducer(factory TradeFactory) error {
 
 	this.factory.trade.Set(id, factory)
 	this.lineage.Set(id, newLineage(trade, &container))
-	return daemon.Run(this.ctx, &this.wg)
+	return daemon.Run()
 }
 
 func (this *daemonManager7) AddScheduleProducer(factory ScheduleFactory) error {
@@ -463,7 +534,7 @@ func (this *daemonManager7) AddScheduleProducer(factory ScheduleFactory) error {
 
 	this.factory.schedule.Set(id, factory)
 	this.lineage.Set(id, newLineage(schedule, &container))
-	return daemon.Run(this.ctx, &this.wg)
+	return daemon.Run()
 }
 
 func (this *daemonManager7) AddPlugin(factory PluginFactory) error {
@@ -486,7 +557,7 @@ func (this *daemonManager7) AddPlugin(factory PluginFactory) error {
 
 	this.factory.plugin.Set(id, factory)
 	this.lineage.Set(id, newLineage(plugin, &container))
-	return daemon.Run(this.ctx, &this.wg)
+	return daemon.Run()
 }
 
 func (this *daemonManager7) Kill(id uuid.UUID) error {
