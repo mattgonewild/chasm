@@ -135,7 +135,66 @@ type RegistryConfig struct {
 }
 
 func NewManager(cfg Config) Manager {
-	return nil
+	switch cfg.Chasm {
+	case 7:
+		return newDaemonManager7(cfg)
+	case 8:
+		return newDaemonManager8(cfg)
+	case 9:
+		return newDaemonManager9(cfg)
+	case 10:
+		return newDaemonManager10(cfg)
+	case 11:
+		return newDaemonManager11(cfg)
+	case 12:
+		return newDaemonManager12(cfg)
+	case 13:
+		return newDaemonManager13(cfg)
+	case 14:
+		return newDaemonManager14(cfg)
+	case 15:
+		return newDaemonManager15(cfg)
+	case 16:
+		return newDaemonManager16(cfg)
+	case 17:
+		return newDaemonManager17(cfg)
+	case 18:
+		return newDaemonManager18(cfg)
+	case 19:
+		return newDaemonManager19(cfg)
+	case 20:
+		return newDaemonManager20(cfg)
+	case 21:
+		return newDaemonManager21(cfg)
+	case 22:
+		return newDaemonManager22(cfg)
+	case 23:
+		return newDaemonManager23(cfg)
+	case 24:
+		return newDaemonManager24(cfg)
+	case 25:
+		return newDaemonManager25(cfg)
+	case 26:
+		return newDaemonManager26(cfg)
+	case 27:
+		return newDaemonManager27(cfg)
+	case 28:
+		return newDaemonManager28(cfg)
+	case 29:
+		return newDaemonManager29(cfg)
+	case 30:
+		return newDaemonManager30(cfg)
+	case 31:
+		return newDaemonManager31(cfg)
+	case 32:
+		return newDaemonManager32(cfg)
+	case 33:
+		return newDaemonManager33(cfg)
+	case 34:
+		return newDaemonManager34(cfg)
+	default:
+		panic(ErrInvalid)
+	}
 }
 
 type domain uint8
