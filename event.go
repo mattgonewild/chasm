@@ -1,25 +1,40 @@
 package chasm
 
-import "github.com/mattgonewild/common"
+import "math"
 
 type SymbolEvent struct {
-	symbol string
-	online bool
-	common.UnixTimestamped
+	Online        bool
+	Symbol        string
+	MinOrder      uint32
+	MinIncrement  uint32
+	EventUnixTime int64
 }
+
+func (this SymbolEvent) UnixNano() int64 { return this.EventUnixTime }
 
 type BookEvent struct {
-	common.UnixTimestamped
+	Bid, Ask      uint32
+	EventUnixTime int64
 }
+
+func (this BookEvent) UnixNano() int64 { return this.EventUnixTime }
 
 type CandleEvent struct {
-	common.UnixTimestamped
+	Open, High, Low, Close uint32
+	EventUnixTime          int64
 }
 
-type TradeEvent struct {
-	common.UnixTimestamped
-}
+func (this CandleEvent) UnixNano() int64 { return this.EventUnixTime }
+
+type TradeEvent int64
+
+func (this TradeEvent) IsSell() bool    { return this < 0 }
+func (this TradeEvent) UnixNano() int64 { return int64(this) & math.MaxInt64 }
 
 type ScheduleEvent struct {
-	common.UnixTimestamped
+	Symbol         string
+	Balance, Basis uint32
+	EventUnixTime  int64
 }
+
+func (this ScheduleEvent) UnixNano() int64 { return this.EventUnixTime }
