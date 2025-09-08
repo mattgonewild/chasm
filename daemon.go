@@ -89,7 +89,7 @@ type (
 		Pause(hidden bool, filter func(DaemonInfo) bool) error
 		Resume(hidden bool, filter func(DaemonInfo) bool) error
 		Restart(hidden bool, filter func(DaemonInfo) bool) error
-		DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo
+		DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo
 		Hide(id uuid.UUID) error
 		Show(id uuid.UUID) error
 		Get(id uuid.UUID) (Daemon, error)
@@ -357,8 +357,8 @@ func (this *daemonManager7) Restart(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager7) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager7) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -762,8 +762,8 @@ func (this *daemonManager8) Restart(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager8) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager8) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -1167,8 +1167,8 @@ func (this *daemonManager9) Restart(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager9) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager9) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -1572,8 +1572,8 @@ func (this *daemonManager10) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager10) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager10) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -1977,8 +1977,8 @@ func (this *daemonManager11) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager11) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager11) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -2382,8 +2382,8 @@ func (this *daemonManager12) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager12) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager12) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -2787,8 +2787,8 @@ func (this *daemonManager13) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager13) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager13) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -3192,8 +3192,8 @@ func (this *daemonManager14) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager14) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager14) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -3597,8 +3597,8 @@ func (this *daemonManager15) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager15) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager15) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -4002,8 +4002,8 @@ func (this *daemonManager16) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager16) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager16) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -4407,8 +4407,8 @@ func (this *daemonManager17) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager17) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager17) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -4812,8 +4812,8 @@ func (this *daemonManager18) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager18) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager18) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -5217,8 +5217,8 @@ func (this *daemonManager19) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager19) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager19) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -5622,8 +5622,8 @@ func (this *daemonManager20) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager20) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager20) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -6027,8 +6027,8 @@ func (this *daemonManager21) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager21) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager21) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -6432,8 +6432,8 @@ func (this *daemonManager22) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager22) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager22) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -6837,8 +6837,8 @@ func (this *daemonManager23) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager23) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager23) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -7242,8 +7242,8 @@ func (this *daemonManager24) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager24) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager24) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -7647,8 +7647,8 @@ func (this *daemonManager25) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager25) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager25) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -8052,8 +8052,8 @@ func (this *daemonManager26) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager26) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager26) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -8457,8 +8457,8 @@ func (this *daemonManager27) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager27) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager27) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -8862,8 +8862,8 @@ func (this *daemonManager28) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager28) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager28) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -9267,8 +9267,8 @@ func (this *daemonManager29) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager29) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager29) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -9672,8 +9672,8 @@ func (this *daemonManager30) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager30) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager30) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -10077,8 +10077,8 @@ func (this *daemonManager31) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager31) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager31) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -10482,8 +10482,8 @@ func (this *daemonManager32) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager32) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager32) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -10887,8 +10887,8 @@ func (this *daemonManager33) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager33) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager33) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -11292,8 +11292,8 @@ func (this *daemonManager34) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager34) DaemonInfo(hidden bool, hint int, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, hint)
+func (this *daemonManager34) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+	info := make([]DaemonInfo, 0, 6144)
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
