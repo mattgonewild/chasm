@@ -41,12 +41,19 @@ type (
 		Identifiable
 	}
 
-	SymbolFactory   = Factory[Control[common.Log[SymbolEvent]]]
-	BookFactory     = Factory[Producer[common.Log[BookEvent]]]
-	CandleFactory   = Factory[Producer[common.Log[CandleEvent]]]
-	TradeFactory    = Factory[Producer[common.Log[TradeEvent]]]
-	ScheduleFactory = Factory[Producer[common.Log[ScheduleEvent]]]
-	PluginFactory   = Factory[Plugin[BrokerageData]]
+	SymbolDaemon   = Control[common.Log[SymbolEvent]]
+	BookDaemon     = Producer[common.Log[BookEvent]]
+	CandleDaemon   = Producer[common.Log[CandleEvent]]
+	TradeDaemon    = Producer[common.Log[TradeEvent]]
+	ScheduleDaemon = Producer[common.Log[ScheduleEvent]]
+	DataDaemon     = Consumer[BrokerageData]
+
+	SymbolFactory   = Factory[SymbolDaemon]
+	BookFactory     = Factory[BookDaemon]
+	CandleFactory   = Factory[CandleDaemon]
+	TradeFactory    = Factory[TradeDaemon]
+	ScheduleFactory = Factory[ScheduleDaemon]
+	DataFactory     = Factory[DataDaemon]
 
 	Control[T any] interface {
 		Producer[T]
@@ -55,12 +62,12 @@ type (
 	}
 
 	Linker interface {
-		AddSymbolProducer(SymbolFactory) error
-		AddBookProducer(BookFactory) error
-		AddCandleProducer(CandleFactory) error
-		AddTradeProducer(TradeFactory) error
-		AddScheduleProducer(ScheduleFactory) error
-		AddPlugin(PluginFactory) error
+		AddSymbol(SymbolFactory) error
+		AddBook(BookFactory) error
+		AddCandle(CandleFactory) error
+		AddTrade(TradeFactory) error
+		AddSchedule(ScheduleFactory) error
+		AddData(DataFactory) error
 	}
 
 	Unlinker interface {
@@ -72,7 +79,7 @@ type (
 		Initialize(registry Registry[T]) error
 	}
 
-	Plugin[T common.UnixTimestamped] interface {
+	Consumer[T common.UnixTimestamped] interface {
 		Daemon
 		Initialize(provider Provider[T]) error
 	}
@@ -123,7 +130,7 @@ type FactoryConfig struct {
 	Candle   int
 	Trade    int
 	Schedule int
-	Plugin   int
+	Data     int
 }
 
 type RegistryConfig struct {
@@ -205,7 +212,7 @@ const (
 	candle
 	trade
 	schedule
-	plugin
+	data
 	domainCount
 )
 
@@ -271,7 +278,7 @@ type daemonManager7 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -289,13 +296,13 @@ func newDaemonManager7(cfg Config) *daemonManager7 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -480,8 +487,8 @@ func (this *daemonManager7) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager7) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager7) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -490,7 +497,7 @@ func (this *daemonManager7) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager7) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager7) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -515,7 +522,7 @@ func (this *daemonManager7) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager7) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager7) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -540,7 +547,7 @@ func (this *daemonManager7) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager7) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager7) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -565,7 +572,7 @@ func (this *daemonManager7) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager7) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager7) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -590,7 +597,7 @@ func (this *daemonManager7) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager7) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager7) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -615,7 +622,7 @@ func (this *daemonManager7) AddScheduleProducer(factory ScheduleFactory) error {
 	return err
 }
 
-func (this *daemonManager7) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager7) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -633,8 +640,8 @@ func (this *daemonManager7) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -676,7 +683,7 @@ type daemonManager8 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -694,13 +701,13 @@ func newDaemonManager8(cfg Config) *daemonManager8 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -885,8 +892,8 @@ func (this *daemonManager8) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager8) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager8) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -895,7 +902,7 @@ func (this *daemonManager8) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager8) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager8) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -920,7 +927,7 @@ func (this *daemonManager8) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager8) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager8) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -945,7 +952,7 @@ func (this *daemonManager8) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager8) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager8) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -970,7 +977,7 @@ func (this *daemonManager8) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager8) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager8) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -995,7 +1002,7 @@ func (this *daemonManager8) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager8) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager8) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1020,7 +1027,7 @@ func (this *daemonManager8) AddScheduleProducer(factory ScheduleFactory) error {
 	return err
 }
 
-func (this *daemonManager8) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager8) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1038,8 +1045,8 @@ func (this *daemonManager8) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -1081,7 +1088,7 @@ type daemonManager9 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -1099,13 +1106,13 @@ func newDaemonManager9(cfg Config) *daemonManager9 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -1290,8 +1297,8 @@ func (this *daemonManager9) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager9) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager9) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -1300,7 +1307,7 @@ func (this *daemonManager9) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager9) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager9) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1325,7 +1332,7 @@ func (this *daemonManager9) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager9) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager9) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1350,7 +1357,7 @@ func (this *daemonManager9) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager9) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager9) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1375,7 +1382,7 @@ func (this *daemonManager9) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager9) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager9) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1400,7 +1407,7 @@ func (this *daemonManager9) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager9) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager9) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1425,7 +1432,7 @@ func (this *daemonManager9) AddScheduleProducer(factory ScheduleFactory) error {
 	return err
 }
 
-func (this *daemonManager9) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager9) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1443,8 +1450,8 @@ func (this *daemonManager9) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -1486,7 +1493,7 @@ type daemonManager10 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -1504,13 +1511,13 @@ func newDaemonManager10(cfg Config) *daemonManager10 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -1695,8 +1702,8 @@ func (this *daemonManager10) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager10) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager10) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -1705,7 +1712,7 @@ func (this *daemonManager10) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager10) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager10) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1730,7 +1737,7 @@ func (this *daemonManager10) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager10) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager10) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1755,7 +1762,7 @@ func (this *daemonManager10) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager10) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager10) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1780,7 +1787,7 @@ func (this *daemonManager10) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager10) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager10) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1805,7 +1812,7 @@ func (this *daemonManager10) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager10) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager10) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1830,7 +1837,7 @@ func (this *daemonManager10) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager10) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager10) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -1848,8 +1855,8 @@ func (this *daemonManager10) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -1891,7 +1898,7 @@ type daemonManager11 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -1909,13 +1916,13 @@ func newDaemonManager11(cfg Config) *daemonManager11 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -2100,8 +2107,8 @@ func (this *daemonManager11) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager11) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager11) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -2110,7 +2117,7 @@ func (this *daemonManager11) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager11) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager11) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2135,7 +2142,7 @@ func (this *daemonManager11) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager11) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager11) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2160,7 +2167,7 @@ func (this *daemonManager11) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager11) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager11) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2185,7 +2192,7 @@ func (this *daemonManager11) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager11) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager11) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2210,7 +2217,7 @@ func (this *daemonManager11) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager11) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager11) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2235,7 +2242,7 @@ func (this *daemonManager11) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager11) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager11) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2253,8 +2260,8 @@ func (this *daemonManager11) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -2296,7 +2303,7 @@ type daemonManager12 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -2314,13 +2321,13 @@ func newDaemonManager12(cfg Config) *daemonManager12 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -2505,8 +2512,8 @@ func (this *daemonManager12) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager12) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager12) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -2515,7 +2522,7 @@ func (this *daemonManager12) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager12) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager12) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2540,7 +2547,7 @@ func (this *daemonManager12) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager12) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager12) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2565,7 +2572,7 @@ func (this *daemonManager12) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager12) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager12) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2590,7 +2597,7 @@ func (this *daemonManager12) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager12) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager12) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2615,7 +2622,7 @@ func (this *daemonManager12) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager12) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager12) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2640,7 +2647,7 @@ func (this *daemonManager12) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager12) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager12) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2658,8 +2665,8 @@ func (this *daemonManager12) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -2701,7 +2708,7 @@ type daemonManager13 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -2719,13 +2726,13 @@ func newDaemonManager13(cfg Config) *daemonManager13 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -2910,8 +2917,8 @@ func (this *daemonManager13) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager13) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager13) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -2920,7 +2927,7 @@ func (this *daemonManager13) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager13) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager13) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2945,7 +2952,7 @@ func (this *daemonManager13) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager13) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager13) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2970,7 +2977,7 @@ func (this *daemonManager13) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager13) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager13) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -2995,7 +3002,7 @@ func (this *daemonManager13) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager13) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager13) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3020,7 +3027,7 @@ func (this *daemonManager13) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager13) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager13) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3045,7 +3052,7 @@ func (this *daemonManager13) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager13) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager13) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3063,8 +3070,8 @@ func (this *daemonManager13) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -3106,7 +3113,7 @@ type daemonManager14 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -3124,13 +3131,13 @@ func newDaemonManager14(cfg Config) *daemonManager14 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -3315,8 +3322,8 @@ func (this *daemonManager14) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager14) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager14) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -3325,7 +3332,7 @@ func (this *daemonManager14) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager14) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager14) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3350,7 +3357,7 @@ func (this *daemonManager14) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager14) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager14) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3375,7 +3382,7 @@ func (this *daemonManager14) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager14) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager14) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3400,7 +3407,7 @@ func (this *daemonManager14) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager14) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager14) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3425,7 +3432,7 @@ func (this *daemonManager14) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager14) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager14) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3450,7 +3457,7 @@ func (this *daemonManager14) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager14) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager14) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3468,8 +3475,8 @@ func (this *daemonManager14) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -3511,7 +3518,7 @@ type daemonManager15 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -3529,13 +3536,13 @@ func newDaemonManager15(cfg Config) *daemonManager15 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -3720,8 +3727,8 @@ func (this *daemonManager15) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager15) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager15) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -3730,7 +3737,7 @@ func (this *daemonManager15) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager15) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager15) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3755,7 +3762,7 @@ func (this *daemonManager15) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager15) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager15) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3780,7 +3787,7 @@ func (this *daemonManager15) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager15) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager15) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3805,7 +3812,7 @@ func (this *daemonManager15) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager15) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager15) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3830,7 +3837,7 @@ func (this *daemonManager15) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager15) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager15) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3855,7 +3862,7 @@ func (this *daemonManager15) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager15) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager15) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -3873,8 +3880,8 @@ func (this *daemonManager15) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -3916,7 +3923,7 @@ type daemonManager16 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -3934,13 +3941,13 @@ func newDaemonManager16(cfg Config) *daemonManager16 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -4125,8 +4132,8 @@ func (this *daemonManager16) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager16) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager16) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -4135,7 +4142,7 @@ func (this *daemonManager16) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager16) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager16) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4160,7 +4167,7 @@ func (this *daemonManager16) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager16) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager16) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4185,7 +4192,7 @@ func (this *daemonManager16) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager16) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager16) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4210,7 +4217,7 @@ func (this *daemonManager16) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager16) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager16) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4235,7 +4242,7 @@ func (this *daemonManager16) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager16) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager16) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4260,7 +4267,7 @@ func (this *daemonManager16) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager16) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager16) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4278,8 +4285,8 @@ func (this *daemonManager16) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -4321,7 +4328,7 @@ type daemonManager17 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -4339,13 +4346,13 @@ func newDaemonManager17(cfg Config) *daemonManager17 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -4530,8 +4537,8 @@ func (this *daemonManager17) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager17) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager17) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -4540,7 +4547,7 @@ func (this *daemonManager17) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager17) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager17) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4565,7 +4572,7 @@ func (this *daemonManager17) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager17) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager17) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4590,7 +4597,7 @@ func (this *daemonManager17) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager17) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager17) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4615,7 +4622,7 @@ func (this *daemonManager17) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager17) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager17) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4640,7 +4647,7 @@ func (this *daemonManager17) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager17) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager17) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4665,7 +4672,7 @@ func (this *daemonManager17) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager17) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager17) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4683,8 +4690,8 @@ func (this *daemonManager17) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -4726,7 +4733,7 @@ type daemonManager18 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -4744,13 +4751,13 @@ func newDaemonManager18(cfg Config) *daemonManager18 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -4935,8 +4942,8 @@ func (this *daemonManager18) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager18) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager18) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -4945,7 +4952,7 @@ func (this *daemonManager18) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager18) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager18) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4970,7 +4977,7 @@ func (this *daemonManager18) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager18) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager18) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -4995,7 +5002,7 @@ func (this *daemonManager18) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager18) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager18) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5020,7 +5027,7 @@ func (this *daemonManager18) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager18) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager18) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5045,7 +5052,7 @@ func (this *daemonManager18) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager18) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager18) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5070,7 +5077,7 @@ func (this *daemonManager18) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager18) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager18) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5088,8 +5095,8 @@ func (this *daemonManager18) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -5131,7 +5138,7 @@ type daemonManager19 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -5149,13 +5156,13 @@ func newDaemonManager19(cfg Config) *daemonManager19 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -5340,8 +5347,8 @@ func (this *daemonManager19) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager19) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager19) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -5350,7 +5357,7 @@ func (this *daemonManager19) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager19) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager19) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5375,7 +5382,7 @@ func (this *daemonManager19) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager19) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager19) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5400,7 +5407,7 @@ func (this *daemonManager19) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager19) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager19) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5425,7 +5432,7 @@ func (this *daemonManager19) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager19) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager19) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5450,7 +5457,7 @@ func (this *daemonManager19) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager19) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager19) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5475,7 +5482,7 @@ func (this *daemonManager19) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager19) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager19) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5493,8 +5500,8 @@ func (this *daemonManager19) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -5536,7 +5543,7 @@ type daemonManager20 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -5554,13 +5561,13 @@ func newDaemonManager20(cfg Config) *daemonManager20 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -5745,8 +5752,8 @@ func (this *daemonManager20) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager20) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager20) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -5755,7 +5762,7 @@ func (this *daemonManager20) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager20) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager20) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5780,7 +5787,7 @@ func (this *daemonManager20) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager20) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager20) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5805,7 +5812,7 @@ func (this *daemonManager20) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager20) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager20) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5830,7 +5837,7 @@ func (this *daemonManager20) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager20) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager20) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5855,7 +5862,7 @@ func (this *daemonManager20) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager20) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager20) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5880,7 +5887,7 @@ func (this *daemonManager20) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager20) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager20) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -5898,8 +5905,8 @@ func (this *daemonManager20) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -5941,7 +5948,7 @@ type daemonManager21 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -5959,13 +5966,13 @@ func newDaemonManager21(cfg Config) *daemonManager21 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -6150,8 +6157,8 @@ func (this *daemonManager21) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager21) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager21) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -6160,7 +6167,7 @@ func (this *daemonManager21) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager21) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager21) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6185,7 +6192,7 @@ func (this *daemonManager21) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager21) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager21) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6210,7 +6217,7 @@ func (this *daemonManager21) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager21) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager21) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6235,7 +6242,7 @@ func (this *daemonManager21) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager21) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager21) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6260,7 +6267,7 @@ func (this *daemonManager21) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager21) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager21) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6285,7 +6292,7 @@ func (this *daemonManager21) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager21) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager21) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6303,8 +6310,8 @@ func (this *daemonManager21) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -6346,7 +6353,7 @@ type daemonManager22 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -6364,13 +6371,13 @@ func newDaemonManager22(cfg Config) *daemonManager22 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -6555,8 +6562,8 @@ func (this *daemonManager22) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager22) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager22) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -6565,7 +6572,7 @@ func (this *daemonManager22) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager22) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager22) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6590,7 +6597,7 @@ func (this *daemonManager22) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager22) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager22) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6615,7 +6622,7 @@ func (this *daemonManager22) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager22) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager22) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6640,7 +6647,7 @@ func (this *daemonManager22) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager22) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager22) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6665,7 +6672,7 @@ func (this *daemonManager22) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager22) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager22) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6690,7 +6697,7 @@ func (this *daemonManager22) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager22) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager22) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6708,8 +6715,8 @@ func (this *daemonManager22) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -6751,7 +6758,7 @@ type daemonManager23 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -6769,13 +6776,13 @@ func newDaemonManager23(cfg Config) *daemonManager23 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -6960,8 +6967,8 @@ func (this *daemonManager23) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager23) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager23) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -6970,7 +6977,7 @@ func (this *daemonManager23) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager23) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager23) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -6995,7 +7002,7 @@ func (this *daemonManager23) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager23) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager23) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7020,7 +7027,7 @@ func (this *daemonManager23) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager23) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager23) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7045,7 +7052,7 @@ func (this *daemonManager23) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager23) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager23) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7070,7 +7077,7 @@ func (this *daemonManager23) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager23) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager23) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7095,7 +7102,7 @@ func (this *daemonManager23) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager23) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager23) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7113,8 +7120,8 @@ func (this *daemonManager23) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -7156,7 +7163,7 @@ type daemonManager24 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -7174,13 +7181,13 @@ func newDaemonManager24(cfg Config) *daemonManager24 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -7365,8 +7372,8 @@ func (this *daemonManager24) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager24) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager24) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -7375,7 +7382,7 @@ func (this *daemonManager24) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager24) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager24) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7400,7 +7407,7 @@ func (this *daemonManager24) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager24) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager24) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7425,7 +7432,7 @@ func (this *daemonManager24) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager24) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager24) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7450,7 +7457,7 @@ func (this *daemonManager24) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager24) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager24) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7475,7 +7482,7 @@ func (this *daemonManager24) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager24) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager24) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7500,7 +7507,7 @@ func (this *daemonManager24) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager24) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager24) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7518,8 +7525,8 @@ func (this *daemonManager24) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -7561,7 +7568,7 @@ type daemonManager25 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -7579,13 +7586,13 @@ func newDaemonManager25(cfg Config) *daemonManager25 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -7770,8 +7777,8 @@ func (this *daemonManager25) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager25) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager25) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -7780,7 +7787,7 @@ func (this *daemonManager25) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager25) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager25) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7805,7 +7812,7 @@ func (this *daemonManager25) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager25) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager25) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7830,7 +7837,7 @@ func (this *daemonManager25) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager25) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager25) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7855,7 +7862,7 @@ func (this *daemonManager25) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager25) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager25) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7880,7 +7887,7 @@ func (this *daemonManager25) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager25) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager25) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7905,7 +7912,7 @@ func (this *daemonManager25) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager25) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager25) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -7923,8 +7930,8 @@ func (this *daemonManager25) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -7966,7 +7973,7 @@ type daemonManager26 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -7984,13 +7991,13 @@ func newDaemonManager26(cfg Config) *daemonManager26 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -8175,8 +8182,8 @@ func (this *daemonManager26) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager26) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager26) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -8185,7 +8192,7 @@ func (this *daemonManager26) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager26) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager26) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8210,7 +8217,7 @@ func (this *daemonManager26) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager26) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager26) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8235,7 +8242,7 @@ func (this *daemonManager26) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager26) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager26) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8260,7 +8267,7 @@ func (this *daemonManager26) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager26) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager26) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8285,7 +8292,7 @@ func (this *daemonManager26) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager26) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager26) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8310,7 +8317,7 @@ func (this *daemonManager26) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager26) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager26) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8328,8 +8335,8 @@ func (this *daemonManager26) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -8371,7 +8378,7 @@ type daemonManager27 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -8389,13 +8396,13 @@ func newDaemonManager27(cfg Config) *daemonManager27 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -8580,8 +8587,8 @@ func (this *daemonManager27) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager27) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager27) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -8590,7 +8597,7 @@ func (this *daemonManager27) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager27) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager27) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8615,7 +8622,7 @@ func (this *daemonManager27) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager27) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager27) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8640,7 +8647,7 @@ func (this *daemonManager27) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager27) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager27) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8665,7 +8672,7 @@ func (this *daemonManager27) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager27) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager27) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8690,7 +8697,7 @@ func (this *daemonManager27) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager27) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager27) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8715,7 +8722,7 @@ func (this *daemonManager27) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager27) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager27) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -8733,8 +8740,8 @@ func (this *daemonManager27) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -8776,7 +8783,7 @@ type daemonManager28 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -8794,13 +8801,13 @@ func newDaemonManager28(cfg Config) *daemonManager28 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -8985,8 +8992,8 @@ func (this *daemonManager28) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager28) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager28) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -8995,7 +9002,7 @@ func (this *daemonManager28) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager28) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager28) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9020,7 +9027,7 @@ func (this *daemonManager28) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager28) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager28) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9045,7 +9052,7 @@ func (this *daemonManager28) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager28) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager28) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9070,7 +9077,7 @@ func (this *daemonManager28) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager28) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager28) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9095,7 +9102,7 @@ func (this *daemonManager28) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager28) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager28) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9120,7 +9127,7 @@ func (this *daemonManager28) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager28) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager28) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9138,8 +9145,8 @@ func (this *daemonManager28) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -9181,7 +9188,7 @@ type daemonManager29 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -9199,13 +9206,13 @@ func newDaemonManager29(cfg Config) *daemonManager29 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -9390,8 +9397,8 @@ func (this *daemonManager29) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager29) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager29) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -9400,7 +9407,7 @@ func (this *daemonManager29) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager29) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager29) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9425,7 +9432,7 @@ func (this *daemonManager29) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager29) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager29) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9450,7 +9457,7 @@ func (this *daemonManager29) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager29) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager29) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9475,7 +9482,7 @@ func (this *daemonManager29) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager29) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager29) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9500,7 +9507,7 @@ func (this *daemonManager29) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager29) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager29) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9525,7 +9532,7 @@ func (this *daemonManager29) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager29) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager29) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9543,8 +9550,8 @@ func (this *daemonManager29) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -9586,7 +9593,7 @@ type daemonManager30 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -9604,13 +9611,13 @@ func newDaemonManager30(cfg Config) *daemonManager30 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -9795,8 +9802,8 @@ func (this *daemonManager30) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager30) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager30) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -9805,7 +9812,7 @@ func (this *daemonManager30) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager30) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager30) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9830,7 +9837,7 @@ func (this *daemonManager30) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager30) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager30) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9855,7 +9862,7 @@ func (this *daemonManager30) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager30) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager30) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9880,7 +9887,7 @@ func (this *daemonManager30) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager30) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager30) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9905,7 +9912,7 @@ func (this *daemonManager30) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager30) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager30) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9930,7 +9937,7 @@ func (this *daemonManager30) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager30) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager30) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -9948,8 +9955,8 @@ func (this *daemonManager30) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -9991,7 +9998,7 @@ type daemonManager31 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -10009,13 +10016,13 @@ func newDaemonManager31(cfg Config) *daemonManager31 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -10200,8 +10207,8 @@ func (this *daemonManager31) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager31) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager31) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -10210,7 +10217,7 @@ func (this *daemonManager31) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager31) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager31) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10235,7 +10242,7 @@ func (this *daemonManager31) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager31) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager31) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10260,7 +10267,7 @@ func (this *daemonManager31) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager31) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager31) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10285,7 +10292,7 @@ func (this *daemonManager31) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager31) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager31) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10310,7 +10317,7 @@ func (this *daemonManager31) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager31) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager31) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10335,7 +10342,7 @@ func (this *daemonManager31) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager31) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager31) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10353,8 +10360,8 @@ func (this *daemonManager31) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -10396,7 +10403,7 @@ type daemonManager32 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -10414,13 +10421,13 @@ func newDaemonManager32(cfg Config) *daemonManager32 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -10605,8 +10612,8 @@ func (this *daemonManager32) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager32) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager32) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -10615,7 +10622,7 @@ func (this *daemonManager32) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager32) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager32) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10640,7 +10647,7 @@ func (this *daemonManager32) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager32) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager32) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10665,7 +10672,7 @@ func (this *daemonManager32) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager32) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager32) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10690,7 +10697,7 @@ func (this *daemonManager32) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager32) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager32) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10715,7 +10722,7 @@ func (this *daemonManager32) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager32) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager32) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10740,7 +10747,7 @@ func (this *daemonManager32) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager32) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager32) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -10758,8 +10765,8 @@ func (this *daemonManager32) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -10801,7 +10808,7 @@ type daemonManager33 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -10819,13 +10826,13 @@ func newDaemonManager33(cfg Config) *daemonManager33 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -11010,8 +11017,8 @@ func (this *daemonManager33) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager33) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager33) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -11020,7 +11027,7 @@ func (this *daemonManager33) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager33) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager33) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11045,7 +11052,7 @@ func (this *daemonManager33) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager33) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager33) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11070,7 +11077,7 @@ func (this *daemonManager33) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager33) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager33) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11095,7 +11102,7 @@ func (this *daemonManager33) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager33) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager33) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11120,7 +11127,7 @@ func (this *daemonManager33) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager33) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager33) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11145,7 +11152,7 @@ func (this *daemonManager33) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager33) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager33) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11163,8 +11170,8 @@ func (this *daemonManager33) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
@@ -11206,7 +11213,7 @@ type daemonManager34 struct {
 		_        [32]byte
 		schedule kit.CoarseMap[uuid.UUID, ScheduleFactory]
 		_        [32]byte
-		plugin   kit.CoarseMap[uuid.UUID, PluginFactory]
+		data     kit.CoarseMap[uuid.UUID, DataFactory]
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
@@ -11224,13 +11231,13 @@ func newDaemonManager34(cfg Config) *daemonManager34 {
 	manager.newDaemon[candle] = manager.newCandleDaemon
 	manager.newDaemon[trade] = manager.newTradeDaemon
 	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[plugin] = manager.newPluginDaemon
+	manager.newDaemon[data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
 	kit.InitCoarseMap(&manager.factory.trade, cfg.Factory.Trade)
 	kit.InitCoarseMap(&manager.factory.schedule, cfg.Factory.Schedule)
-	kit.InitCoarseMap(&manager.factory.plugin, cfg.Factory.Plugin)
+	kit.InitCoarseMap(&manager.factory.data, cfg.Factory.Data)
 	kit.InitCoarseRegistry(&manager.registry.symbol, cfg.Registry.Symbol)
 	kit.InitCoarseRegistry(&manager.registry.book, cfg.Registry.Book)
 	kit.InitCoarseRegistry(&manager.registry.candle, cfg.Registry.Candle)
@@ -11415,8 +11422,8 @@ func (this *daemonManager34) newScheduleDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(this.registry.Schedule())
 }
 
-func (this *daemonManager34) newPluginDaemon(id uuid.UUID) (Daemon, error) {
-	factory, err := this.factory.plugin.Get(id)
+func (this *daemonManager34) newDataDaemon(id uuid.UUID) (Daemon, error) {
+	factory, err := this.factory.data.Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -11425,7 +11432,7 @@ func (this *daemonManager34) newPluginDaemon(id uuid.UUID) (Daemon, error) {
 	return daemon, daemon.Initialize(newBrokerageDataProvider(&this.registry))
 }
 
-func (this *daemonManager34) AddSymbolProducer(factory SymbolFactory) error {
+func (this *daemonManager34) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11450,7 +11457,7 @@ func (this *daemonManager34) AddSymbolProducer(factory SymbolFactory) error {
 	return err
 }
 
-func (this *daemonManager34) AddBookProducer(factory BookFactory) error {
+func (this *daemonManager34) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11475,7 +11482,7 @@ func (this *daemonManager34) AddBookProducer(factory BookFactory) error {
 	return err
 }
 
-func (this *daemonManager34) AddCandleProducer(factory CandleFactory) error {
+func (this *daemonManager34) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11500,7 +11507,7 @@ func (this *daemonManager34) AddCandleProducer(factory CandleFactory) error {
 	return err
 }
 
-func (this *daemonManager34) AddTradeProducer(factory TradeFactory) error {
+func (this *daemonManager34) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11525,7 +11532,7 @@ func (this *daemonManager34) AddTradeProducer(factory TradeFactory) error {
 	return err
 }
 
-func (this *daemonManager34) AddScheduleProducer(factory ScheduleFactory) error {
+func (this *daemonManager34) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11550,7 +11557,7 @@ func (this *daemonManager34) AddScheduleProducer(factory ScheduleFactory) error 
 	return err
 }
 
-func (this *daemonManager34) AddPlugin(factory PluginFactory) error {
+func (this *daemonManager34) AddData(factory DataFactory) error {
 	id := factory.ID()
 
 	_, err := this.lineage.Get(id)
@@ -11568,8 +11575,8 @@ func (this *daemonManager34) AddPlugin(factory PluginFactory) error {
 		return err
 	}
 
-	this.factory.plugin.Set(id, factory)
-	this.lineage.Set(id, newLineage(plugin, &container))
+	this.factory.data.Set(id, factory)
+	this.lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
 	this.onAdd(daemon)
 	return err
