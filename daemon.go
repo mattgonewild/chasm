@@ -24,7 +24,7 @@ type (
 	}
 
 	DaemonInfo interface {
-		Name() string
+		Tag() string
 		Config() []byte
 		Status() (int, int64)
 		Report() []byte
