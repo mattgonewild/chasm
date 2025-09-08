@@ -286,6 +286,8 @@ type daemonManager7 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager7(cfg Config) *daemonManager7 {
@@ -358,7 +360,7 @@ func (this *daemonManager7) Restart(hidden bool, filter func(DaemonInfo) bool) (
 }
 
 func (this *daemonManager7) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -691,6 +693,8 @@ type daemonManager8 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager8(cfg Config) *daemonManager8 {
@@ -763,7 +767,7 @@ func (this *daemonManager8) Restart(hidden bool, filter func(DaemonInfo) bool) (
 }
 
 func (this *daemonManager8) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -1096,6 +1100,8 @@ type daemonManager9 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager9(cfg Config) *daemonManager9 {
@@ -1168,7 +1174,7 @@ func (this *daemonManager9) Restart(hidden bool, filter func(DaemonInfo) bool) (
 }
 
 func (this *daemonManager9) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -1501,6 +1507,8 @@ type daemonManager10 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager10(cfg Config) *daemonManager10 {
@@ -1573,7 +1581,7 @@ func (this *daemonManager10) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager10) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -1906,6 +1914,8 @@ type daemonManager11 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager11(cfg Config) *daemonManager11 {
@@ -1978,7 +1988,7 @@ func (this *daemonManager11) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager11) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -2311,6 +2321,8 @@ type daemonManager12 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager12(cfg Config) *daemonManager12 {
@@ -2383,7 +2395,7 @@ func (this *daemonManager12) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager12) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -2716,6 +2728,8 @@ type daemonManager13 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager13(cfg Config) *daemonManager13 {
@@ -2788,7 +2802,7 @@ func (this *daemonManager13) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager13) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -3121,6 +3135,8 @@ type daemonManager14 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager14(cfg Config) *daemonManager14 {
@@ -3193,7 +3209,7 @@ func (this *daemonManager14) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager14) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -3526,6 +3542,8 @@ type daemonManager15 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager15(cfg Config) *daemonManager15 {
@@ -3598,7 +3616,7 @@ func (this *daemonManager15) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager15) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -3931,6 +3949,8 @@ type daemonManager16 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager16(cfg Config) *daemonManager16 {
@@ -4003,7 +4023,7 @@ func (this *daemonManager16) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager16) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -4336,6 +4356,8 @@ type daemonManager17 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager17(cfg Config) *daemonManager17 {
@@ -4408,7 +4430,7 @@ func (this *daemonManager17) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager17) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -4741,6 +4763,8 @@ type daemonManager18 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager18(cfg Config) *daemonManager18 {
@@ -4813,7 +4837,7 @@ func (this *daemonManager18) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager18) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -5146,6 +5170,8 @@ type daemonManager19 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager19(cfg Config) *daemonManager19 {
@@ -5218,7 +5244,7 @@ func (this *daemonManager19) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager19) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -5551,6 +5577,8 @@ type daemonManager20 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager20(cfg Config) *daemonManager20 {
@@ -5623,7 +5651,7 @@ func (this *daemonManager20) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager20) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -5956,6 +5984,8 @@ type daemonManager21 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager21(cfg Config) *daemonManager21 {
@@ -6028,7 +6058,7 @@ func (this *daemonManager21) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager21) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -6361,6 +6391,8 @@ type daemonManager22 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager22(cfg Config) *daemonManager22 {
@@ -6433,7 +6465,7 @@ func (this *daemonManager22) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager22) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -6766,6 +6798,8 @@ type daemonManager23 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager23(cfg Config) *daemonManager23 {
@@ -6838,7 +6872,7 @@ func (this *daemonManager23) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager23) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -7171,6 +7205,8 @@ type daemonManager24 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager24(cfg Config) *daemonManager24 {
@@ -7243,7 +7279,7 @@ func (this *daemonManager24) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager24) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -7576,6 +7612,8 @@ type daemonManager25 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager25(cfg Config) *daemonManager25 {
@@ -7648,7 +7686,7 @@ func (this *daemonManager25) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager25) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -7981,6 +8019,8 @@ type daemonManager26 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager26(cfg Config) *daemonManager26 {
@@ -8053,7 +8093,7 @@ func (this *daemonManager26) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager26) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -8386,6 +8426,8 @@ type daemonManager27 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager27(cfg Config) *daemonManager27 {
@@ -8458,7 +8500,7 @@ func (this *daemonManager27) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager27) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -8791,6 +8833,8 @@ type daemonManager28 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager28(cfg Config) *daemonManager28 {
@@ -8863,7 +8907,7 @@ func (this *daemonManager28) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager28) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -9196,6 +9240,8 @@ type daemonManager29 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager29(cfg Config) *daemonManager29 {
@@ -9268,7 +9314,7 @@ func (this *daemonManager29) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager29) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -9601,6 +9647,8 @@ type daemonManager30 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager30(cfg Config) *daemonManager30 {
@@ -9673,7 +9721,7 @@ func (this *daemonManager30) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager30) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -10006,6 +10054,8 @@ type daemonManager31 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager31(cfg Config) *daemonManager31 {
@@ -10078,7 +10128,7 @@ func (this *daemonManager31) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager31) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -10411,6 +10461,8 @@ type daemonManager32 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager32(cfg Config) *daemonManager32 {
@@ -10483,7 +10535,7 @@ func (this *daemonManager32) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager32) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -10816,6 +10868,8 @@ type daemonManager33 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager33(cfg Config) *daemonManager33 {
@@ -10888,7 +10942,7 @@ func (this *daemonManager33) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager33) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
@@ -11221,6 +11275,8 @@ type daemonManager34 struct {
 	counter  atomic.Uint64
 	onAdd    func(DaemonInfo)
 	onKill   func(DaemonInfo)
+	_        [48]byte
+	buf      [8192]DaemonInfo
 }
 
 func newDaemonManager34(cfg Config) *daemonManager34 {
@@ -11293,7 +11349,7 @@ func (this *daemonManager34) Restart(hidden bool, filter func(DaemonInfo) bool) 
 }
 
 func (this *daemonManager34) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
-	info := make([]DaemonInfo, 0, 6144)
+	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if filter(container) {
