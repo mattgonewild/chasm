@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/mattgonewild/chasm/proto;proto";
+
+service Forge {
+    rpc AddSymbol(BinInfo) returns (Nil);
+    rpc AddBook(BinInfo) returns (Nil);
+    rpc AddCandle(BinInfo) returns (Nil);
+    rpc AddTrade(BinInfo) returns (Nil);
+    rpc AddSchedule(BinInfo) returns (Nil);
+    rpc AddData(BinInfo) returns (Nil);
+    rpc Alive(Nil) returns (DaeCount);
+    rpc DaemonInfo(Filter) returns (RepDaeInfo);
+    rpc Revive(ID) returns (Nil);
+    rpc Pause(Filter) returns (Nil);
+    rpc Resume(Filter) returns (Nil);
+    rpc Restart(Filter) returns (Nil);
+    rpc SetConfig(Filter) returns (Nil);
+    rpc Hide(Filter) returns (Nil);
+    rpc Show(Filter) returns (Nil);
+    rpc Kill(ID) returns (Nil);
+    rpc Shutdown(Nil) returns (Nil);
+}
+
+message Nil {}
+
+message BinInfo {
+    string symbol = 1;
+    string path   = 2;
+}
+
+message Filter {
+    bool            hidden  = 1;
+    ID              id      = 2;
+    Status          status  = 3;
+    optional string tag     = 4;
+    optional bytes  config  = 5;
+    optional bytes  report  = 6;
+    optional bytes  payload = 7;
+}
+
+message DaeCount {
+    sfixed64 total = 1;
+}
+
+message RepDaeInfo {
+    repeated DaeInfo daemon = 1;
+}
+
+message DaeInfo {
+    ID     id     = 1;
+    Status status = 2;
+    string tag    = 3;
+    bytes  config = 4;
+    bytes  report = 5;
+}
+
+message ID {
+    fixed64 low  = 1;
+    fixed64 high = 2;
+}
+
+message Status {
+    sfixed64 code  = 1;
+    sfixed64 since = 2;
+}
