@@ -298,6 +298,11 @@ type daemonManager7 struct {
 
 func newDaemonManager7(cfg Config) *daemonManager7 {
 	manager := new(daemonManager7)
+	initDaemonManager7(manager, cfg)
+	return manager
+}
+
+func initDaemonManager7(manager *daemonManager7, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -318,7 +323,6 @@ func newDaemonManager7(cfg Config) *daemonManager7 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager7) AddSymbol(factory SymbolFactory) error {
@@ -751,6 +755,11 @@ type daemonManager8 struct {
 
 func newDaemonManager8(cfg Config) *daemonManager8 {
 	manager := new(daemonManager8)
+	initDaemonManager8(manager, cfg)
+	return manager
+}
+
+func initDaemonManager8(manager *daemonManager8, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -771,7 +780,6 @@ func newDaemonManager8(cfg Config) *daemonManager8 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager8) AddSymbol(factory SymbolFactory) error {
@@ -1204,6 +1212,11 @@ type daemonManager9 struct {
 
 func newDaemonManager9(cfg Config) *daemonManager9 {
 	manager := new(daemonManager9)
+	initDaemonManager9(manager, cfg)
+	return manager
+}
+
+func initDaemonManager9(manager *daemonManager9, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -1224,7 +1237,6 @@ func newDaemonManager9(cfg Config) *daemonManager9 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager9) AddSymbol(factory SymbolFactory) error {
@@ -1657,6 +1669,11 @@ type daemonManager10 struct {
 
 func newDaemonManager10(cfg Config) *daemonManager10 {
 	manager := new(daemonManager10)
+	initDaemonManager10(manager, cfg)
+	return manager
+}
+
+func initDaemonManager10(manager *daemonManager10, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -1677,7 +1694,6 @@ func newDaemonManager10(cfg Config) *daemonManager10 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager10) AddSymbol(factory SymbolFactory) error {
@@ -2110,6 +2126,11 @@ type daemonManager11 struct {
 
 func newDaemonManager11(cfg Config) *daemonManager11 {
 	manager := new(daemonManager11)
+	initDaemonManager11(manager, cfg)
+	return manager
+}
+
+func initDaemonManager11(manager *daemonManager11, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -2130,7 +2151,6 @@ func newDaemonManager11(cfg Config) *daemonManager11 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager11) AddSymbol(factory SymbolFactory) error {
@@ -2563,6 +2583,11 @@ type daemonManager12 struct {
 
 func newDaemonManager12(cfg Config) *daemonManager12 {
 	manager := new(daemonManager12)
+	initDaemonManager12(manager, cfg)
+	return manager
+}
+
+func initDaemonManager12(manager *daemonManager12, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -2583,7 +2608,6 @@ func newDaemonManager12(cfg Config) *daemonManager12 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager12) AddSymbol(factory SymbolFactory) error {
@@ -3016,6 +3040,11 @@ type daemonManager13 struct {
 
 func newDaemonManager13(cfg Config) *daemonManager13 {
 	manager := new(daemonManager13)
+	initDaemonManager13(manager, cfg)
+	return manager
+}
+
+func initDaemonManager13(manager *daemonManager13, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -3036,7 +3065,6 @@ func newDaemonManager13(cfg Config) *daemonManager13 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager13) AddSymbol(factory SymbolFactory) error {
@@ -3469,6 +3497,11 @@ type daemonManager14 struct {
 
 func newDaemonManager14(cfg Config) *daemonManager14 {
 	manager := new(daemonManager14)
+	initDaemonManager14(manager, cfg)
+	return manager
+}
+
+func initDaemonManager14(manager *daemonManager14, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -3489,7 +3522,6 @@ func newDaemonManager14(cfg Config) *daemonManager14 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager14) AddSymbol(factory SymbolFactory) error {
@@ -3922,6 +3954,11 @@ type daemonManager15 struct {
 
 func newDaemonManager15(cfg Config) *daemonManager15 {
 	manager := new(daemonManager15)
+	initDaemonManager15(manager, cfg)
+	return manager
+}
+
+func initDaemonManager15(manager *daemonManager15, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -3942,7 +3979,6 @@ func newDaemonManager15(cfg Config) *daemonManager15 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager15) AddSymbol(factory SymbolFactory) error {
@@ -4375,6 +4411,11 @@ type daemonManager16 struct {
 
 func newDaemonManager16(cfg Config) *daemonManager16 {
 	manager := new(daemonManager16)
+	initDaemonManager16(manager, cfg)
+	return manager
+}
+
+func initDaemonManager16(manager *daemonManager16, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -4395,7 +4436,6 @@ func newDaemonManager16(cfg Config) *daemonManager16 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager16) AddSymbol(factory SymbolFactory) error {
@@ -4828,6 +4868,11 @@ type daemonManager17 struct {
 
 func newDaemonManager17(cfg Config) *daemonManager17 {
 	manager := new(daemonManager17)
+	initDaemonManager17(manager, cfg)
+	return manager
+}
+
+func initDaemonManager17(manager *daemonManager17, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -4848,7 +4893,6 @@ func newDaemonManager17(cfg Config) *daemonManager17 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager17) AddSymbol(factory SymbolFactory) error {
@@ -5281,6 +5325,11 @@ type daemonManager18 struct {
 
 func newDaemonManager18(cfg Config) *daemonManager18 {
 	manager := new(daemonManager18)
+	initDaemonManager18(manager, cfg)
+	return manager
+}
+
+func initDaemonManager18(manager *daemonManager18, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -5301,7 +5350,6 @@ func newDaemonManager18(cfg Config) *daemonManager18 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager18) AddSymbol(factory SymbolFactory) error {
@@ -5734,6 +5782,11 @@ type daemonManager19 struct {
 
 func newDaemonManager19(cfg Config) *daemonManager19 {
 	manager := new(daemonManager19)
+	initDaemonManager19(manager, cfg)
+	return manager
+}
+
+func initDaemonManager19(manager *daemonManager19, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -5754,7 +5807,6 @@ func newDaemonManager19(cfg Config) *daemonManager19 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager19) AddSymbol(factory SymbolFactory) error {
@@ -6187,6 +6239,11 @@ type daemonManager20 struct {
 
 func newDaemonManager20(cfg Config) *daemonManager20 {
 	manager := new(daemonManager20)
+	initDaemonManager20(manager, cfg)
+	return manager
+}
+
+func initDaemonManager20(manager *daemonManager20, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -6207,7 +6264,6 @@ func newDaemonManager20(cfg Config) *daemonManager20 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager20) AddSymbol(factory SymbolFactory) error {
@@ -6640,6 +6696,11 @@ type daemonManager21 struct {
 
 func newDaemonManager21(cfg Config) *daemonManager21 {
 	manager := new(daemonManager21)
+	initDaemonManager21(manager, cfg)
+	return manager
+}
+
+func initDaemonManager21(manager *daemonManager21, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -6660,7 +6721,6 @@ func newDaemonManager21(cfg Config) *daemonManager21 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager21) AddSymbol(factory SymbolFactory) error {
@@ -7093,6 +7153,11 @@ type daemonManager22 struct {
 
 func newDaemonManager22(cfg Config) *daemonManager22 {
 	manager := new(daemonManager22)
+	initDaemonManager22(manager, cfg)
+	return manager
+}
+
+func initDaemonManager22(manager *daemonManager22, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -7113,7 +7178,6 @@ func newDaemonManager22(cfg Config) *daemonManager22 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager22) AddSymbol(factory SymbolFactory) error {
@@ -7546,6 +7610,11 @@ type daemonManager23 struct {
 
 func newDaemonManager23(cfg Config) *daemonManager23 {
 	manager := new(daemonManager23)
+	initDaemonManager23(manager, cfg)
+	return manager
+}
+
+func initDaemonManager23(manager *daemonManager23, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -7566,7 +7635,6 @@ func newDaemonManager23(cfg Config) *daemonManager23 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager23) AddSymbol(factory SymbolFactory) error {
@@ -7999,6 +8067,11 @@ type daemonManager24 struct {
 
 func newDaemonManager24(cfg Config) *daemonManager24 {
 	manager := new(daemonManager24)
+	initDaemonManager24(manager, cfg)
+	return manager
+}
+
+func initDaemonManager24(manager *daemonManager24, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -8019,7 +8092,6 @@ func newDaemonManager24(cfg Config) *daemonManager24 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager24) AddSymbol(factory SymbolFactory) error {
@@ -8452,6 +8524,11 @@ type daemonManager25 struct {
 
 func newDaemonManager25(cfg Config) *daemonManager25 {
 	manager := new(daemonManager25)
+	initDaemonManager25(manager, cfg)
+	return manager
+}
+
+func initDaemonManager25(manager *daemonManager25, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -8472,7 +8549,6 @@ func newDaemonManager25(cfg Config) *daemonManager25 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager25) AddSymbol(factory SymbolFactory) error {
@@ -8905,6 +8981,11 @@ type daemonManager26 struct {
 
 func newDaemonManager26(cfg Config) *daemonManager26 {
 	manager := new(daemonManager26)
+	initDaemonManager26(manager, cfg)
+	return manager
+}
+
+func initDaemonManager26(manager *daemonManager26, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -8925,7 +9006,6 @@ func newDaemonManager26(cfg Config) *daemonManager26 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager26) AddSymbol(factory SymbolFactory) error {
@@ -9358,6 +9438,11 @@ type daemonManager27 struct {
 
 func newDaemonManager27(cfg Config) *daemonManager27 {
 	manager := new(daemonManager27)
+	initDaemonManager27(manager, cfg)
+	return manager
+}
+
+func initDaemonManager27(manager *daemonManager27, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -9378,7 +9463,6 @@ func newDaemonManager27(cfg Config) *daemonManager27 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager27) AddSymbol(factory SymbolFactory) error {
@@ -9811,6 +9895,11 @@ type daemonManager28 struct {
 
 func newDaemonManager28(cfg Config) *daemonManager28 {
 	manager := new(daemonManager28)
+	initDaemonManager28(manager, cfg)
+	return manager
+}
+
+func initDaemonManager28(manager *daemonManager28, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -9831,7 +9920,6 @@ func newDaemonManager28(cfg Config) *daemonManager28 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager28) AddSymbol(factory SymbolFactory) error {
@@ -10264,6 +10352,11 @@ type daemonManager29 struct {
 
 func newDaemonManager29(cfg Config) *daemonManager29 {
 	manager := new(daemonManager29)
+	initDaemonManager29(manager, cfg)
+	return manager
+}
+
+func initDaemonManager29(manager *daemonManager29, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -10284,7 +10377,6 @@ func newDaemonManager29(cfg Config) *daemonManager29 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager29) AddSymbol(factory SymbolFactory) error {
@@ -10717,6 +10809,11 @@ type daemonManager30 struct {
 
 func newDaemonManager30(cfg Config) *daemonManager30 {
 	manager := new(daemonManager30)
+	initDaemonManager30(manager, cfg)
+	return manager
+}
+
+func initDaemonManager30(manager *daemonManager30, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -10737,7 +10834,6 @@ func newDaemonManager30(cfg Config) *daemonManager30 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager30) AddSymbol(factory SymbolFactory) error {
@@ -11170,6 +11266,11 @@ type daemonManager31 struct {
 
 func newDaemonManager31(cfg Config) *daemonManager31 {
 	manager := new(daemonManager31)
+	initDaemonManager31(manager, cfg)
+	return manager
+}
+
+func initDaemonManager31(manager *daemonManager31, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -11190,7 +11291,6 @@ func newDaemonManager31(cfg Config) *daemonManager31 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager31) AddSymbol(factory SymbolFactory) error {
@@ -11623,6 +11723,11 @@ type daemonManager32 struct {
 
 func newDaemonManager32(cfg Config) *daemonManager32 {
 	manager := new(daemonManager32)
+	initDaemonManager32(manager, cfg)
+	return manager
+}
+
+func initDaemonManager32(manager *daemonManager32, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -11643,7 +11748,6 @@ func newDaemonManager32(cfg Config) *daemonManager32 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager32) AddSymbol(factory SymbolFactory) error {
@@ -12076,6 +12180,11 @@ type daemonManager33 struct {
 
 func newDaemonManager33(cfg Config) *daemonManager33 {
 	manager := new(daemonManager33)
+	initDaemonManager33(manager, cfg)
+	return manager
+}
+
+func initDaemonManager33(manager *daemonManager33, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -12096,7 +12205,6 @@ func newDaemonManager33(cfg Config) *daemonManager33 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager33) AddSymbol(factory SymbolFactory) error {
@@ -12529,6 +12637,11 @@ type daemonManager34 struct {
 
 func newDaemonManager34(cfg Config) *daemonManager34 {
 	manager := new(daemonManager34)
+	initDaemonManager34(manager, cfg)
+	return manager
+}
+
+func initDaemonManager34(manager *daemonManager34, cfg Config) {
 	kit.InitCoarseMap(&manager.lineage, cfg.Lineage)
 	manager.newDaemon[symbol] = manager.newSymbolDaemon
 	manager.newDaemon[book] = manager.newBookDaemon
@@ -12549,7 +12662,6 @@ func newDaemonManager34(cfg Config) *daemonManager34 {
 	kit.InitCoarseRegistry(&manager.registry.schedule, cfg.Registry.Schedule)
 	manager.onAdd = cfg.OnAdd
 	manager.onKill = cfg.OnKill
-	return manager
 }
 
 func (this *daemonManager34) AddSymbol(factory SymbolFactory) error {
