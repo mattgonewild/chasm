@@ -94,8 +94,8 @@ type (
 		Resume(hidden bool, selector Selector) error
 		Restart(hidden bool, selector Selector) error
 		DaemonInfo(hidden bool, selector Selector) []DaemonInfo
-		Hide(id uuid.UUID) error
-		Show(id uuid.UUID) error
+		Hide(selector Selector) error
+		Show(selector Selector) error
 		Get(id uuid.UUID) (Daemon, error)
 		Revive(id uuid.UUID) error
 		Linker
@@ -265,6 +265,7 @@ type newDaemonFunc func(id uuid.UUID) (Daemon, error)
 var (
 	ErrInvalid = errors.New("matt:chasm::daemon: invalid")
 	ErrLocked  = errors.New("matt:chasm::daemon: locked")
+	ErrNoOp    = errors.New("matt:chasm::daemon: no-op")
 )
 
 type daemonManager7 struct {
@@ -328,36 +329,57 @@ func (this *daemonManager7) Shutdown() (err error) {
 }
 
 func (this *daemonManager7) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager7) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager7) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -376,31 +398,37 @@ func (this *daemonManager7) DaemonInfo(hidden bool, selector Selector) []DaemonI
 	return info
 }
 
-func (this *daemonManager7) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager7) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager7) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager7) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -735,36 +763,57 @@ func (this *daemonManager8) Shutdown() (err error) {
 }
 
 func (this *daemonManager8) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager8) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager8) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -783,31 +832,37 @@ func (this *daemonManager8) DaemonInfo(hidden bool, selector Selector) []DaemonI
 	return info
 }
 
-func (this *daemonManager8) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager8) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager8) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager8) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -1142,36 +1197,57 @@ func (this *daemonManager9) Shutdown() (err error) {
 }
 
 func (this *daemonManager9) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager9) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager9) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -1190,31 +1266,37 @@ func (this *daemonManager9) DaemonInfo(hidden bool, selector Selector) []DaemonI
 	return info
 }
 
-func (this *daemonManager9) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager9) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager9) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager9) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -1549,36 +1631,57 @@ func (this *daemonManager10) Shutdown() (err error) {
 }
 
 func (this *daemonManager10) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager10) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager10) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -1597,31 +1700,37 @@ func (this *daemonManager10) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager10) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager10) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager10) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager10) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -1956,36 +2065,57 @@ func (this *daemonManager11) Shutdown() (err error) {
 }
 
 func (this *daemonManager11) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager11) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager11) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -2004,31 +2134,37 @@ func (this *daemonManager11) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager11) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager11) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager11) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager11) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -2363,36 +2499,57 @@ func (this *daemonManager12) Shutdown() (err error) {
 }
 
 func (this *daemonManager12) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager12) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager12) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -2411,31 +2568,37 @@ func (this *daemonManager12) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager12) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager12) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager12) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager12) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -2770,36 +2933,57 @@ func (this *daemonManager13) Shutdown() (err error) {
 }
 
 func (this *daemonManager13) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager13) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager13) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -2818,31 +3002,37 @@ func (this *daemonManager13) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager13) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager13) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager13) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager13) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -3177,36 +3367,57 @@ func (this *daemonManager14) Shutdown() (err error) {
 }
 
 func (this *daemonManager14) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager14) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager14) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -3225,31 +3436,37 @@ func (this *daemonManager14) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager14) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager14) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager14) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager14) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -3584,36 +3801,57 @@ func (this *daemonManager15) Shutdown() (err error) {
 }
 
 func (this *daemonManager15) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager15) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager15) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -3632,31 +3870,37 @@ func (this *daemonManager15) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager15) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager15) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager15) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager15) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -3991,36 +4235,57 @@ func (this *daemonManager16) Shutdown() (err error) {
 }
 
 func (this *daemonManager16) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager16) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager16) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -4039,31 +4304,37 @@ func (this *daemonManager16) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager16) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager16) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager16) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager16) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -4398,36 +4669,57 @@ func (this *daemonManager17) Shutdown() (err error) {
 }
 
 func (this *daemonManager17) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager17) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager17) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -4446,31 +4738,37 @@ func (this *daemonManager17) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager17) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager17) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager17) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager17) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -4805,36 +5103,57 @@ func (this *daemonManager18) Shutdown() (err error) {
 }
 
 func (this *daemonManager18) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager18) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager18) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -4853,31 +5172,37 @@ func (this *daemonManager18) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager18) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager18) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager18) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager18) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -5212,36 +5537,57 @@ func (this *daemonManager19) Shutdown() (err error) {
 }
 
 func (this *daemonManager19) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager19) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager19) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -5260,31 +5606,37 @@ func (this *daemonManager19) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager19) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager19) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager19) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager19) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -5619,36 +5971,57 @@ func (this *daemonManager20) Shutdown() (err error) {
 }
 
 func (this *daemonManager20) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager20) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager20) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -5667,31 +6040,37 @@ func (this *daemonManager20) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager20) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager20) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager20) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager20) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -6026,36 +6405,57 @@ func (this *daemonManager21) Shutdown() (err error) {
 }
 
 func (this *daemonManager21) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager21) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager21) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -6074,31 +6474,37 @@ func (this *daemonManager21) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager21) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager21) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager21) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager21) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -6433,36 +6839,57 @@ func (this *daemonManager22) Shutdown() (err error) {
 }
 
 func (this *daemonManager22) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager22) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager22) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -6481,31 +6908,37 @@ func (this *daemonManager22) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager22) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager22) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager22) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager22) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -6840,36 +7273,57 @@ func (this *daemonManager23) Shutdown() (err error) {
 }
 
 func (this *daemonManager23) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager23) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager23) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -6888,31 +7342,37 @@ func (this *daemonManager23) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager23) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager23) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager23) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager23) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -7247,36 +7707,57 @@ func (this *daemonManager24) Shutdown() (err error) {
 }
 
 func (this *daemonManager24) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager24) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager24) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -7295,31 +7776,37 @@ func (this *daemonManager24) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager24) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager24) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager24) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager24) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -7654,36 +8141,57 @@ func (this *daemonManager25) Shutdown() (err error) {
 }
 
 func (this *daemonManager25) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager25) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager25) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -7702,31 +8210,37 @@ func (this *daemonManager25) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager25) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager25) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager25) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager25) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -8061,36 +8575,57 @@ func (this *daemonManager26) Shutdown() (err error) {
 }
 
 func (this *daemonManager26) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager26) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager26) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -8109,31 +8644,37 @@ func (this *daemonManager26) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager26) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager26) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager26) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager26) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -8468,36 +9009,57 @@ func (this *daemonManager27) Shutdown() (err error) {
 }
 
 func (this *daemonManager27) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager27) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager27) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -8516,31 +9078,37 @@ func (this *daemonManager27) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager27) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager27) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager27) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager27) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -8875,36 +9443,57 @@ func (this *daemonManager28) Shutdown() (err error) {
 }
 
 func (this *daemonManager28) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager28) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager28) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -8923,31 +9512,37 @@ func (this *daemonManager28) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager28) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager28) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager28) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager28) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -9282,36 +9877,57 @@ func (this *daemonManager29) Shutdown() (err error) {
 }
 
 func (this *daemonManager29) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager29) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager29) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -9330,31 +9946,37 @@ func (this *daemonManager29) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager29) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager29) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager29) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager29) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -9689,36 +10311,57 @@ func (this *daemonManager30) Shutdown() (err error) {
 }
 
 func (this *daemonManager30) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager30) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager30) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -9737,31 +10380,37 @@ func (this *daemonManager30) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager30) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager30) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager30) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager30) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -10096,36 +10745,57 @@ func (this *daemonManager31) Shutdown() (err error) {
 }
 
 func (this *daemonManager31) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager31) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager31) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -10144,31 +10814,37 @@ func (this *daemonManager31) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager31) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager31) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager31) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager31) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -10503,36 +11179,57 @@ func (this *daemonManager32) Shutdown() (err error) {
 }
 
 func (this *daemonManager32) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager32) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager32) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -10551,31 +11248,37 @@ func (this *daemonManager32) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager32) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager32) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager32) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager32) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -10910,36 +11613,57 @@ func (this *daemonManager33) Shutdown() (err error) {
 }
 
 func (this *daemonManager33) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager33) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager33) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -10958,31 +11682,37 @@ func (this *daemonManager33) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager33) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager33) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager33) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager33) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
@@ -11317,36 +12047,57 @@ func (this *daemonManager34) Shutdown() (err error) {
 }
 
 func (this *daemonManager34) Pause(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager34) Resume(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
 }
 
 func (this *daemonManager34) Restart(hidden bool, selector Selector) (err error) {
+	noOp := true
+
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
 			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
+				noOp = false
 			}
 		}
+	}
+
+	if noOp {
+		return ErrNoOp
 	}
 
 	return err
@@ -11365,31 +12116,37 @@ func (this *daemonManager34) DaemonInfo(hidden bool, selector Selector) []Daemon
 	return info
 }
 
-func (this *daemonManager34) Hide(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager34) Hide(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = true
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = true
 	return nil
 }
 
-func (this *daemonManager34) Show(id uuid.UUID) error {
-	lineage, err := this.lineage.Get(id)
-	if err != nil {
-		return err
+func (this *daemonManager34) Show(selector Selector) error {
+	noOp := true
+
+	for container := range this.chasm.All() {
+		if selector.Select(container) {
+			container.hidden = false
+			noOp = false
+		}
 	}
 
-	if !lineage.alive {
-		return ErrInvalid
+	if noOp {
+		return ErrNoOp
 	}
 
-	lineage.ptr.hidden = false
 	return nil
 }
 
