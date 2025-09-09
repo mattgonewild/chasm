@@ -84,12 +84,16 @@ type (
 		Initialize(provider Provider[T]) error
 	}
 
+	Selector interface {
+		Select(DaemonInfo) bool
+	}
+
 	Manager interface {
 		Shutdown() error
-		Pause(hidden bool, filter func(DaemonInfo) bool) error
-		Resume(hidden bool, filter func(DaemonInfo) bool) error
-		Restart(hidden bool, filter func(DaemonInfo) bool) error
-		DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo
+		Pause(hidden bool, selector Selector) error
+		Resume(hidden bool, selector Selector) error
+		Restart(hidden bool, selector Selector) error
+		DaemonInfo(hidden bool, selector Selector) []DaemonInfo
 		Hide(id uuid.UUID) error
 		Show(id uuid.UUID) error
 		Get(id uuid.UUID) (Daemon, error)
@@ -323,10 +327,10 @@ func (this *daemonManager7) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager7) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager7) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -335,10 +339,10 @@ func (this *daemonManager7) Pause(hidden bool, filter func(DaemonInfo) bool) (er
 	return err
 }
 
-func (this *daemonManager7) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager7) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -347,10 +351,10 @@ func (this *daemonManager7) Resume(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager7) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager7) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -359,11 +363,11 @@ func (this *daemonManager7) Restart(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager7) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager7) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -730,10 +734,10 @@ func (this *daemonManager8) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager8) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager8) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -742,10 +746,10 @@ func (this *daemonManager8) Pause(hidden bool, filter func(DaemonInfo) bool) (er
 	return err
 }
 
-func (this *daemonManager8) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager8) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -754,10 +758,10 @@ func (this *daemonManager8) Resume(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager8) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager8) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -766,11 +770,11 @@ func (this *daemonManager8) Restart(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager8) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager8) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -1137,10 +1141,10 @@ func (this *daemonManager9) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager9) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager9) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -1149,10 +1153,10 @@ func (this *daemonManager9) Pause(hidden bool, filter func(DaemonInfo) bool) (er
 	return err
 }
 
-func (this *daemonManager9) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager9) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -1161,10 +1165,10 @@ func (this *daemonManager9) Resume(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager9) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager9) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -1173,11 +1177,11 @@ func (this *daemonManager9) Restart(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager9) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager9) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -1544,10 +1548,10 @@ func (this *daemonManager10) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager10) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager10) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -1556,10 +1560,10 @@ func (this *daemonManager10) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager10) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager10) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -1568,10 +1572,10 @@ func (this *daemonManager10) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager10) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager10) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -1580,11 +1584,11 @@ func (this *daemonManager10) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager10) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager10) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -1951,10 +1955,10 @@ func (this *daemonManager11) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager11) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager11) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -1963,10 +1967,10 @@ func (this *daemonManager11) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager11) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager11) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -1975,10 +1979,10 @@ func (this *daemonManager11) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager11) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager11) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -1987,11 +1991,11 @@ func (this *daemonManager11) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager11) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager11) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -2358,10 +2362,10 @@ func (this *daemonManager12) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager12) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager12) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -2370,10 +2374,10 @@ func (this *daemonManager12) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager12) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager12) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -2382,10 +2386,10 @@ func (this *daemonManager12) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager12) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager12) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -2394,11 +2398,11 @@ func (this *daemonManager12) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager12) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager12) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -2765,10 +2769,10 @@ func (this *daemonManager13) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager13) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager13) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -2777,10 +2781,10 @@ func (this *daemonManager13) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager13) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager13) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -2789,10 +2793,10 @@ func (this *daemonManager13) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager13) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager13) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -2801,11 +2805,11 @@ func (this *daemonManager13) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager13) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager13) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -3172,10 +3176,10 @@ func (this *daemonManager14) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager14) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager14) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -3184,10 +3188,10 @@ func (this *daemonManager14) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager14) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager14) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -3196,10 +3200,10 @@ func (this *daemonManager14) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager14) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager14) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -3208,11 +3212,11 @@ func (this *daemonManager14) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager14) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager14) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -3579,10 +3583,10 @@ func (this *daemonManager15) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager15) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager15) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -3591,10 +3595,10 @@ func (this *daemonManager15) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager15) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager15) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -3603,10 +3607,10 @@ func (this *daemonManager15) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager15) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager15) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -3615,11 +3619,11 @@ func (this *daemonManager15) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager15) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager15) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -3986,10 +3990,10 @@ func (this *daemonManager16) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager16) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager16) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -3998,10 +4002,10 @@ func (this *daemonManager16) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager16) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager16) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -4010,10 +4014,10 @@ func (this *daemonManager16) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager16) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager16) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -4022,11 +4026,11 @@ func (this *daemonManager16) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager16) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager16) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -4393,10 +4397,10 @@ func (this *daemonManager17) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager17) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager17) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -4405,10 +4409,10 @@ func (this *daemonManager17) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager17) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager17) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -4417,10 +4421,10 @@ func (this *daemonManager17) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager17) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager17) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -4429,11 +4433,11 @@ func (this *daemonManager17) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager17) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager17) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -4800,10 +4804,10 @@ func (this *daemonManager18) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager18) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager18) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -4812,10 +4816,10 @@ func (this *daemonManager18) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager18) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager18) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -4824,10 +4828,10 @@ func (this *daemonManager18) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager18) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager18) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -4836,11 +4840,11 @@ func (this *daemonManager18) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager18) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager18) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -5207,10 +5211,10 @@ func (this *daemonManager19) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager19) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager19) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -5219,10 +5223,10 @@ func (this *daemonManager19) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager19) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager19) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -5231,10 +5235,10 @@ func (this *daemonManager19) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager19) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager19) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -5243,11 +5247,11 @@ func (this *daemonManager19) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager19) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager19) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -5614,10 +5618,10 @@ func (this *daemonManager20) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager20) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager20) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -5626,10 +5630,10 @@ func (this *daemonManager20) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager20) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager20) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -5638,10 +5642,10 @@ func (this *daemonManager20) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager20) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager20) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -5650,11 +5654,11 @@ func (this *daemonManager20) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager20) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager20) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -6021,10 +6025,10 @@ func (this *daemonManager21) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager21) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager21) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -6033,10 +6037,10 @@ func (this *daemonManager21) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager21) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager21) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -6045,10 +6049,10 @@ func (this *daemonManager21) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager21) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager21) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -6057,11 +6061,11 @@ func (this *daemonManager21) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager21) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager21) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -6428,10 +6432,10 @@ func (this *daemonManager22) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager22) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager22) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -6440,10 +6444,10 @@ func (this *daemonManager22) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager22) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager22) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -6452,10 +6456,10 @@ func (this *daemonManager22) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager22) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager22) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -6464,11 +6468,11 @@ func (this *daemonManager22) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager22) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager22) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -6835,10 +6839,10 @@ func (this *daemonManager23) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager23) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager23) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -6847,10 +6851,10 @@ func (this *daemonManager23) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager23) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager23) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -6859,10 +6863,10 @@ func (this *daemonManager23) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager23) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager23) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -6871,11 +6875,11 @@ func (this *daemonManager23) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager23) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager23) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -7242,10 +7246,10 @@ func (this *daemonManager24) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager24) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager24) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -7254,10 +7258,10 @@ func (this *daemonManager24) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager24) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager24) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -7266,10 +7270,10 @@ func (this *daemonManager24) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager24) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager24) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -7278,11 +7282,11 @@ func (this *daemonManager24) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager24) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager24) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -7649,10 +7653,10 @@ func (this *daemonManager25) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager25) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager25) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -7661,10 +7665,10 @@ func (this *daemonManager25) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager25) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager25) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -7673,10 +7677,10 @@ func (this *daemonManager25) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager25) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager25) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -7685,11 +7689,11 @@ func (this *daemonManager25) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager25) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager25) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -8056,10 +8060,10 @@ func (this *daemonManager26) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager26) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager26) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -8068,10 +8072,10 @@ func (this *daemonManager26) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager26) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager26) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -8080,10 +8084,10 @@ func (this *daemonManager26) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager26) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager26) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -8092,11 +8096,11 @@ func (this *daemonManager26) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager26) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager26) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -8463,10 +8467,10 @@ func (this *daemonManager27) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager27) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager27) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -8475,10 +8479,10 @@ func (this *daemonManager27) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager27) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager27) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -8487,10 +8491,10 @@ func (this *daemonManager27) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager27) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager27) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -8499,11 +8503,11 @@ func (this *daemonManager27) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager27) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager27) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -8870,10 +8874,10 @@ func (this *daemonManager28) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager28) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager28) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -8882,10 +8886,10 @@ func (this *daemonManager28) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager28) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager28) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -8894,10 +8898,10 @@ func (this *daemonManager28) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager28) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager28) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -8906,11 +8910,11 @@ func (this *daemonManager28) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager28) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager28) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -9277,10 +9281,10 @@ func (this *daemonManager29) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager29) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager29) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -9289,10 +9293,10 @@ func (this *daemonManager29) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager29) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager29) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -9301,10 +9305,10 @@ func (this *daemonManager29) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager29) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager29) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -9313,11 +9317,11 @@ func (this *daemonManager29) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager29) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager29) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -9684,10 +9688,10 @@ func (this *daemonManager30) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager30) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager30) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -9696,10 +9700,10 @@ func (this *daemonManager30) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager30) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager30) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -9708,10 +9712,10 @@ func (this *daemonManager30) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager30) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager30) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -9720,11 +9724,11 @@ func (this *daemonManager30) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager30) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager30) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -10091,10 +10095,10 @@ func (this *daemonManager31) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager31) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager31) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -10103,10 +10107,10 @@ func (this *daemonManager31) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager31) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager31) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -10115,10 +10119,10 @@ func (this *daemonManager31) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager31) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager31) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -10127,11 +10131,11 @@ func (this *daemonManager31) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager31) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager31) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -10498,10 +10502,10 @@ func (this *daemonManager32) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager32) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager32) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -10510,10 +10514,10 @@ func (this *daemonManager32) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager32) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager32) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -10522,10 +10526,10 @@ func (this *daemonManager32) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager32) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager32) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -10534,11 +10538,11 @@ func (this *daemonManager32) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager32) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager32) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -10905,10 +10909,10 @@ func (this *daemonManager33) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager33) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager33) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -10917,10 +10921,10 @@ func (this *daemonManager33) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager33) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager33) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -10929,10 +10933,10 @@ func (this *daemonManager33) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager33) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager33) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -10941,11 +10945,11 @@ func (this *daemonManager33) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager33) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager33) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
@@ -11312,10 +11316,10 @@ func (this *daemonManager34) Shutdown() (err error) {
 	return err
 }
 
-func (this *daemonManager34) Pause(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager34) Pause(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Pause())
 			}
 		}
@@ -11324,10 +11328,10 @@ func (this *daemonManager34) Pause(hidden bool, filter func(DaemonInfo) bool) (e
 	return err
 }
 
-func (this *daemonManager34) Resume(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager34) Resume(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Resume())
 			}
 		}
@@ -11336,10 +11340,10 @@ func (this *daemonManager34) Resume(hidden bool, filter func(DaemonInfo) bool) (
 	return err
 }
 
-func (this *daemonManager34) Restart(hidden bool, filter func(DaemonInfo) bool) (err error) {
+func (this *daemonManager34) Restart(hidden bool, selector Selector) (err error) {
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				err = errors.Join(err, container.Restart())
 			}
 		}
@@ -11348,11 +11352,11 @@ func (this *daemonManager34) Restart(hidden bool, filter func(DaemonInfo) bool) 
 	return err
 }
 
-func (this *daemonManager34) DaemonInfo(hidden bool, filter func(DaemonInfo) bool) []DaemonInfo {
+func (this *daemonManager34) DaemonInfo(hidden bool, selector Selector) []DaemonInfo {
 	info := this.buf[:0]
 	for container := range this.chasm.All() {
 		if container.hidden == hidden {
-			if filter(container) {
+			if selector.Select(container) {
 				info = append(info, container)
 			}
 		}
