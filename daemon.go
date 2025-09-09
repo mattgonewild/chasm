@@ -29,7 +29,7 @@ type (
 		Status() (int, int64)
 		Report() []byte
 		Error() error
-		FactoryInfo() FactoryInfo
+		FactoryInfo
 	}
 
 	Factory[T Daemon] interface {
@@ -205,7 +205,7 @@ func NewManager(cfg Config) Manager {
 	case 34:
 		return newDaemonManager34(cfg)
 	default:
-		panic(ErrInvalid)
+		panic(ErrConfig)
 	}
 }
 
@@ -264,9 +264,9 @@ func (this container) Compare(that container) int {
 type newDaemonFunc func(id uuid.UUID) (Daemon, error)
 
 var (
-	ErrInvalid = errors.New("matt:chasm::daemon: invalid")
-	ErrLocked  = errors.New("matt:chasm::daemon: locked")
-	ErrNoOp    = errors.New("matt:chasm::daemon: no-op")
+	ErrDaemonInvalid = errors.New("matt::chasm::daemon: invalid")
+	ErrLocked        = errors.New("matt::chasm::daemon: locked")
+	ErrNoOp          = errors.New("matt::chasm::daemon: no-op")
 )
 
 type daemonManager7 struct {
@@ -330,7 +330,7 @@ func (this *daemonManager7) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -355,7 +355,7 @@ func (this *daemonManager7) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -380,7 +380,7 @@ func (this *daemonManager7) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -405,7 +405,7 @@ func (this *daemonManager7) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -430,7 +430,7 @@ func (this *daemonManager7) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -455,7 +455,7 @@ func (this *daemonManager7) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -568,7 +568,7 @@ func (this *daemonManager7) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -704,7 +704,7 @@ func (this *daemonManager7) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -787,7 +787,7 @@ func (this *daemonManager8) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -812,7 +812,7 @@ func (this *daemonManager8) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -837,7 +837,7 @@ func (this *daemonManager8) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -862,7 +862,7 @@ func (this *daemonManager8) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -887,7 +887,7 @@ func (this *daemonManager8) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -912,7 +912,7 @@ func (this *daemonManager8) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1025,7 +1025,7 @@ func (this *daemonManager8) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -1161,7 +1161,7 @@ func (this *daemonManager8) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -1244,7 +1244,7 @@ func (this *daemonManager9) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -1269,7 +1269,7 @@ func (this *daemonManager9) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1294,7 +1294,7 @@ func (this *daemonManager9) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1319,7 +1319,7 @@ func (this *daemonManager9) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1344,7 +1344,7 @@ func (this *daemonManager9) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1369,7 +1369,7 @@ func (this *daemonManager9) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1482,7 +1482,7 @@ func (this *daemonManager9) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -1618,7 +1618,7 @@ func (this *daemonManager9) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -1701,7 +1701,7 @@ func (this *daemonManager10) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -1726,7 +1726,7 @@ func (this *daemonManager10) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1751,7 +1751,7 @@ func (this *daemonManager10) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1776,7 +1776,7 @@ func (this *daemonManager10) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1801,7 +1801,7 @@ func (this *daemonManager10) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1826,7 +1826,7 @@ func (this *daemonManager10) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -1939,7 +1939,7 @@ func (this *daemonManager10) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -2075,7 +2075,7 @@ func (this *daemonManager10) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -2158,7 +2158,7 @@ func (this *daemonManager11) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -2183,7 +2183,7 @@ func (this *daemonManager11) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2208,7 +2208,7 @@ func (this *daemonManager11) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2233,7 +2233,7 @@ func (this *daemonManager11) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2258,7 +2258,7 @@ func (this *daemonManager11) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2283,7 +2283,7 @@ func (this *daemonManager11) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2396,7 +2396,7 @@ func (this *daemonManager11) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -2532,7 +2532,7 @@ func (this *daemonManager11) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -2615,7 +2615,7 @@ func (this *daemonManager12) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -2640,7 +2640,7 @@ func (this *daemonManager12) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2665,7 +2665,7 @@ func (this *daemonManager12) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2690,7 +2690,7 @@ func (this *daemonManager12) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2715,7 +2715,7 @@ func (this *daemonManager12) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2740,7 +2740,7 @@ func (this *daemonManager12) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -2853,7 +2853,7 @@ func (this *daemonManager12) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -2989,7 +2989,7 @@ func (this *daemonManager12) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -3072,7 +3072,7 @@ func (this *daemonManager13) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -3097,7 +3097,7 @@ func (this *daemonManager13) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3122,7 +3122,7 @@ func (this *daemonManager13) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3147,7 +3147,7 @@ func (this *daemonManager13) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3172,7 +3172,7 @@ func (this *daemonManager13) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3197,7 +3197,7 @@ func (this *daemonManager13) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3310,7 +3310,7 @@ func (this *daemonManager13) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -3446,7 +3446,7 @@ func (this *daemonManager13) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -3529,7 +3529,7 @@ func (this *daemonManager14) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -3554,7 +3554,7 @@ func (this *daemonManager14) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3579,7 +3579,7 @@ func (this *daemonManager14) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3604,7 +3604,7 @@ func (this *daemonManager14) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3629,7 +3629,7 @@ func (this *daemonManager14) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3654,7 +3654,7 @@ func (this *daemonManager14) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -3767,7 +3767,7 @@ func (this *daemonManager14) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -3903,7 +3903,7 @@ func (this *daemonManager14) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -3986,7 +3986,7 @@ func (this *daemonManager15) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -4011,7 +4011,7 @@ func (this *daemonManager15) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4036,7 +4036,7 @@ func (this *daemonManager15) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4061,7 +4061,7 @@ func (this *daemonManager15) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4086,7 +4086,7 @@ func (this *daemonManager15) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4111,7 +4111,7 @@ func (this *daemonManager15) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4224,7 +4224,7 @@ func (this *daemonManager15) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -4360,7 +4360,7 @@ func (this *daemonManager15) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -4443,7 +4443,7 @@ func (this *daemonManager16) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -4468,7 +4468,7 @@ func (this *daemonManager16) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4493,7 +4493,7 @@ func (this *daemonManager16) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4518,7 +4518,7 @@ func (this *daemonManager16) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4543,7 +4543,7 @@ func (this *daemonManager16) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4568,7 +4568,7 @@ func (this *daemonManager16) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4681,7 +4681,7 @@ func (this *daemonManager16) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -4817,7 +4817,7 @@ func (this *daemonManager16) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -4900,7 +4900,7 @@ func (this *daemonManager17) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -4925,7 +4925,7 @@ func (this *daemonManager17) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4950,7 +4950,7 @@ func (this *daemonManager17) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -4975,7 +4975,7 @@ func (this *daemonManager17) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5000,7 +5000,7 @@ func (this *daemonManager17) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5025,7 +5025,7 @@ func (this *daemonManager17) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5138,7 +5138,7 @@ func (this *daemonManager17) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -5274,7 +5274,7 @@ func (this *daemonManager17) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -5357,7 +5357,7 @@ func (this *daemonManager18) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -5382,7 +5382,7 @@ func (this *daemonManager18) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5407,7 +5407,7 @@ func (this *daemonManager18) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5432,7 +5432,7 @@ func (this *daemonManager18) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5457,7 +5457,7 @@ func (this *daemonManager18) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5482,7 +5482,7 @@ func (this *daemonManager18) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5595,7 +5595,7 @@ func (this *daemonManager18) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -5731,7 +5731,7 @@ func (this *daemonManager18) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -5814,7 +5814,7 @@ func (this *daemonManager19) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -5839,7 +5839,7 @@ func (this *daemonManager19) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5864,7 +5864,7 @@ func (this *daemonManager19) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5889,7 +5889,7 @@ func (this *daemonManager19) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5914,7 +5914,7 @@ func (this *daemonManager19) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -5939,7 +5939,7 @@ func (this *daemonManager19) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6052,7 +6052,7 @@ func (this *daemonManager19) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -6188,7 +6188,7 @@ func (this *daemonManager19) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -6271,7 +6271,7 @@ func (this *daemonManager20) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -6296,7 +6296,7 @@ func (this *daemonManager20) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6321,7 +6321,7 @@ func (this *daemonManager20) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6346,7 +6346,7 @@ func (this *daemonManager20) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6371,7 +6371,7 @@ func (this *daemonManager20) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6396,7 +6396,7 @@ func (this *daemonManager20) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6509,7 +6509,7 @@ func (this *daemonManager20) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -6645,7 +6645,7 @@ func (this *daemonManager20) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -6728,7 +6728,7 @@ func (this *daemonManager21) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -6753,7 +6753,7 @@ func (this *daemonManager21) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6778,7 +6778,7 @@ func (this *daemonManager21) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6803,7 +6803,7 @@ func (this *daemonManager21) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6828,7 +6828,7 @@ func (this *daemonManager21) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6853,7 +6853,7 @@ func (this *daemonManager21) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -6966,7 +6966,7 @@ func (this *daemonManager21) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -7102,7 +7102,7 @@ func (this *daemonManager21) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -7185,7 +7185,7 @@ func (this *daemonManager22) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -7210,7 +7210,7 @@ func (this *daemonManager22) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7235,7 +7235,7 @@ func (this *daemonManager22) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7260,7 +7260,7 @@ func (this *daemonManager22) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7285,7 +7285,7 @@ func (this *daemonManager22) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7310,7 +7310,7 @@ func (this *daemonManager22) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7423,7 +7423,7 @@ func (this *daemonManager22) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -7559,7 +7559,7 @@ func (this *daemonManager22) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -7642,7 +7642,7 @@ func (this *daemonManager23) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -7667,7 +7667,7 @@ func (this *daemonManager23) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7692,7 +7692,7 @@ func (this *daemonManager23) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7717,7 +7717,7 @@ func (this *daemonManager23) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7742,7 +7742,7 @@ func (this *daemonManager23) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7767,7 +7767,7 @@ func (this *daemonManager23) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -7880,7 +7880,7 @@ func (this *daemonManager23) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -8016,7 +8016,7 @@ func (this *daemonManager23) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -8099,7 +8099,7 @@ func (this *daemonManager24) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -8124,7 +8124,7 @@ func (this *daemonManager24) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8149,7 +8149,7 @@ func (this *daemonManager24) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8174,7 +8174,7 @@ func (this *daemonManager24) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8199,7 +8199,7 @@ func (this *daemonManager24) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8224,7 +8224,7 @@ func (this *daemonManager24) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8337,7 +8337,7 @@ func (this *daemonManager24) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -8473,7 +8473,7 @@ func (this *daemonManager24) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -8556,7 +8556,7 @@ func (this *daemonManager25) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -8581,7 +8581,7 @@ func (this *daemonManager25) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8606,7 +8606,7 @@ func (this *daemonManager25) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8631,7 +8631,7 @@ func (this *daemonManager25) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8656,7 +8656,7 @@ func (this *daemonManager25) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8681,7 +8681,7 @@ func (this *daemonManager25) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -8794,7 +8794,7 @@ func (this *daemonManager25) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -8930,7 +8930,7 @@ func (this *daemonManager25) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -9013,7 +9013,7 @@ func (this *daemonManager26) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -9038,7 +9038,7 @@ func (this *daemonManager26) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9063,7 +9063,7 @@ func (this *daemonManager26) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9088,7 +9088,7 @@ func (this *daemonManager26) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9113,7 +9113,7 @@ func (this *daemonManager26) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9138,7 +9138,7 @@ func (this *daemonManager26) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9251,7 +9251,7 @@ func (this *daemonManager26) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -9387,7 +9387,7 @@ func (this *daemonManager26) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -9470,7 +9470,7 @@ func (this *daemonManager27) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -9495,7 +9495,7 @@ func (this *daemonManager27) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9520,7 +9520,7 @@ func (this *daemonManager27) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9545,7 +9545,7 @@ func (this *daemonManager27) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9570,7 +9570,7 @@ func (this *daemonManager27) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9595,7 +9595,7 @@ func (this *daemonManager27) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9708,7 +9708,7 @@ func (this *daemonManager27) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -9844,7 +9844,7 @@ func (this *daemonManager27) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -9927,7 +9927,7 @@ func (this *daemonManager28) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -9952,7 +9952,7 @@ func (this *daemonManager28) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -9977,7 +9977,7 @@ func (this *daemonManager28) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10002,7 +10002,7 @@ func (this *daemonManager28) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10027,7 +10027,7 @@ func (this *daemonManager28) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10052,7 +10052,7 @@ func (this *daemonManager28) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10165,7 +10165,7 @@ func (this *daemonManager28) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -10301,7 +10301,7 @@ func (this *daemonManager28) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -10384,7 +10384,7 @@ func (this *daemonManager29) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -10409,7 +10409,7 @@ func (this *daemonManager29) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10434,7 +10434,7 @@ func (this *daemonManager29) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10459,7 +10459,7 @@ func (this *daemonManager29) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10484,7 +10484,7 @@ func (this *daemonManager29) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10509,7 +10509,7 @@ func (this *daemonManager29) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10622,7 +10622,7 @@ func (this *daemonManager29) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -10758,7 +10758,7 @@ func (this *daemonManager29) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -10841,7 +10841,7 @@ func (this *daemonManager30) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -10866,7 +10866,7 @@ func (this *daemonManager30) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10891,7 +10891,7 @@ func (this *daemonManager30) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10916,7 +10916,7 @@ func (this *daemonManager30) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10941,7 +10941,7 @@ func (this *daemonManager30) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -10966,7 +10966,7 @@ func (this *daemonManager30) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11079,7 +11079,7 @@ func (this *daemonManager30) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -11215,7 +11215,7 @@ func (this *daemonManager30) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -11298,7 +11298,7 @@ func (this *daemonManager31) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -11323,7 +11323,7 @@ func (this *daemonManager31) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11348,7 +11348,7 @@ func (this *daemonManager31) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11373,7 +11373,7 @@ func (this *daemonManager31) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11398,7 +11398,7 @@ func (this *daemonManager31) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11423,7 +11423,7 @@ func (this *daemonManager31) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11536,7 +11536,7 @@ func (this *daemonManager31) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -11672,7 +11672,7 @@ func (this *daemonManager31) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -11755,7 +11755,7 @@ func (this *daemonManager32) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -11780,7 +11780,7 @@ func (this *daemonManager32) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11805,7 +11805,7 @@ func (this *daemonManager32) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11830,7 +11830,7 @@ func (this *daemonManager32) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11855,7 +11855,7 @@ func (this *daemonManager32) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11880,7 +11880,7 @@ func (this *daemonManager32) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -11993,7 +11993,7 @@ func (this *daemonManager32) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -12129,7 +12129,7 @@ func (this *daemonManager32) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -12212,7 +12212,7 @@ func (this *daemonManager33) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -12237,7 +12237,7 @@ func (this *daemonManager33) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12262,7 +12262,7 @@ func (this *daemonManager33) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12287,7 +12287,7 @@ func (this *daemonManager33) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12312,7 +12312,7 @@ func (this *daemonManager33) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12337,7 +12337,7 @@ func (this *daemonManager33) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12450,7 +12450,7 @@ func (this *daemonManager33) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -12586,7 +12586,7 @@ func (this *daemonManager33) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
@@ -12669,7 +12669,7 @@ func (this *daemonManager34) AddSymbol(factory SymbolFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New().WithLinker(this).WithUnlinker(this)
@@ -12694,7 +12694,7 @@ func (this *daemonManager34) AddBook(factory BookFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12719,7 +12719,7 @@ func (this *daemonManager34) AddCandle(factory CandleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12744,7 +12744,7 @@ func (this *daemonManager34) AddTrade(factory TradeFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12769,7 +12769,7 @@ func (this *daemonManager34) AddSchedule(factory ScheduleFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12794,7 +12794,7 @@ func (this *daemonManager34) AddData(factory DataFactory) error {
 
 	_, err := this.lineage.Get(id)
 	if err == nil {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	daemon := factory.New()
@@ -12907,7 +12907,7 @@ func (this *daemonManager34) Get(id uuid.UUID) (Daemon, error) {
 	}
 
 	if !lineage.alive {
-		return nil, ErrInvalid
+		return nil, ErrDaemonInvalid
 	}
 
 	return lineage.ptr.Daemon, nil
@@ -13043,7 +13043,7 @@ func (this *daemonManager34) Kill(id uuid.UUID) error {
 	}
 
 	if !lineage.alive {
-		return ErrInvalid
+		return ErrDaemonInvalid
 	}
 
 	container := *lineage.ptr
