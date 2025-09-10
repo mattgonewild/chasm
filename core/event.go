@@ -1,4 +1,4 @@
-package chasm
+package core
 
 import "math"
 

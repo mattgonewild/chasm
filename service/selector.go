@@ -1,9 +1,10 @@
-package chasm
+package service
 
 import (
 	"bytes"
 	"math"
 
+	"github.com/mattgonewild/chasm/core"
 	"github.com/mattgonewild/chasm/proto"
 )
 
@@ -16,7 +17,7 @@ const (
 	matchTableCap
 )
 
-type matchFunc = func(*selector, DaemonInfo) bool
+type matchFunc = func(*selector, core.DaemonInfo) bool
 
 var (
 	matchTable [matchTableCap]matchFunc
@@ -32,7 +33,7 @@ type selector struct {
 	report []byte
 }
 
-func (this *selector) Select(daemon DaemonInfo) bool { return this.filter(this, daemon) }
+func (this *selector) Select(daemon core.DaemonInfo) bool { return this.filter(this, daemon) }
 
 func (this *selector) LoadFilter(filter *proto.Filter) {
 	this.bitmap = 0
@@ -144,150 +145,150 @@ func getMatchFunc(bitmap uint) matchFunc {
 	}
 }
 
-func matchAll(_ *selector, _ DaemonInfo) bool { return true }
+func matchAll(_ *selector, _ core.DaemonInfo) bool { return true }
 
-func matchCode(fi *selector, di DaemonInfo) bool {
+func matchCode(fi *selector, di core.DaemonInfo) bool {
 	code, _ := di.Status()
 	return fi.code == code
 }
 
-func matchSince(fi *selector, di DaemonInfo) bool {
+func matchSince(fi *selector, di core.DaemonInfo) bool {
 	_, since := di.Status()
 	return since >= fi.since
 }
 
-func matchCodeSince(fi *selector, di DaemonInfo) bool {
+func matchCodeSince(fi *selector, di core.DaemonInfo) bool {
 	code, since := di.Status()
 	return fi.code == code && since >= fi.since
 }
 
-func matchTag(fi *selector, di DaemonInfo) bool { return fi.tag == di.Tag() }
+func matchTag(fi *selector, di core.DaemonInfo) bool { return fi.tag == di.Tag() }
 
-func matchCodeTag(fi *selector, di DaemonInfo) bool {
+func matchCodeTag(fi *selector, di core.DaemonInfo) bool {
 	code, _ := di.Status()
 	return fi.code == code && fi.tag == di.Tag()
 }
 
-func matchSinceTag(fi *selector, di DaemonInfo) bool {
+func matchSinceTag(fi *selector, di core.DaemonInfo) bool {
 	_, since := di.Status()
 	return since >= fi.since && fi.tag == di.Tag()
 }
 
-func matchCodeSinceTag(fi *selector, di DaemonInfo) bool {
+func matchCodeSinceTag(fi *selector, di core.DaemonInfo) bool {
 	code, since := di.Status()
 	return fi.code == code && since >= fi.since && fi.tag == di.Tag()
 }
 
-func matchConfig(fi *selector, di DaemonInfo) bool {
+func matchConfig(fi *selector, di core.DaemonInfo) bool {
 	return bytes.Contains(di.Config(), fi.config)
 }
 
-func matchCodeConfig(fi *selector, di DaemonInfo) bool {
+func matchCodeConfig(fi *selector, di core.DaemonInfo) bool {
 	code, _ := di.Status()
 	return fi.code == code && bytes.Contains(di.Config(), fi.config)
 }
 
-func matchSinceConfig(fi *selector, di DaemonInfo) bool {
+func matchSinceConfig(fi *selector, di core.DaemonInfo) bool {
 	_, since := di.Status()
 	return since >= fi.since && bytes.Contains(di.Config(), fi.config)
 }
 
-func matchCodeSinceConfig(fi *selector, di DaemonInfo) bool {
+func matchCodeSinceConfig(fi *selector, di core.DaemonInfo) bool {
 	code, since := di.Status()
 	return fi.code == code && since >= fi.since && bytes.Contains(di.Config(), fi.config)
 }
 
-func matchTagConfig(fi *selector, di DaemonInfo) bool {
+func matchTagConfig(fi *selector, di core.DaemonInfo) bool {
 	return fi.tag == di.Tag() && bytes.Contains(di.Config(), fi.config)
 }
 
-func matchCodeTagConfig(fi *selector, di DaemonInfo) bool {
+func matchCodeTagConfig(fi *selector, di core.DaemonInfo) bool {
 	code, _ := di.Status()
 	return fi.code == code && fi.tag == di.Tag() && bytes.Contains(di.Config(), fi.config)
 }
 
-func matchSinceTagConfig(fi *selector, di DaemonInfo) bool {
+func matchSinceTagConfig(fi *selector, di core.DaemonInfo) bool {
 	_, since := di.Status()
 	return since >= fi.since && fi.tag == di.Tag() && bytes.Contains(di.Config(), fi.config)
 }
 
-func matchCodeSinceTagConfig(fi *selector, di DaemonInfo) bool {
+func matchCodeSinceTagConfig(fi *selector, di core.DaemonInfo) bool {
 	code, since := di.Status()
 	return fi.code == code && since >= fi.since && fi.tag == di.Tag() && bytes.Contains(di.Config(), fi.config)
 }
 
-func matchReport(fi *selector, di DaemonInfo) bool {
+func matchReport(fi *selector, di core.DaemonInfo) bool {
 	return bytes.Contains(di.Report(), fi.report)
 }
 
-func matchCodeReport(fi *selector, di DaemonInfo) bool {
+func matchCodeReport(fi *selector, di core.DaemonInfo) bool {
 	code, _ := di.Status()
 	return fi.code == code && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchSinceReport(fi *selector, di DaemonInfo) bool {
+func matchSinceReport(fi *selector, di core.DaemonInfo) bool {
 	_, since := di.Status()
 	return since >= fi.since && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchCodeSinceReport(fi *selector, di DaemonInfo) bool {
+func matchCodeSinceReport(fi *selector, di core.DaemonInfo) bool {
 	code, since := di.Status()
 	return fi.code == code && since >= fi.since && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchTagReport(fi *selector, di DaemonInfo) bool {
+func matchTagReport(fi *selector, di core.DaemonInfo) bool {
 	return fi.tag == di.Tag() && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchCodeTagReport(fi *selector, di DaemonInfo) bool {
+func matchCodeTagReport(fi *selector, di core.DaemonInfo) bool {
 	code, _ := di.Status()
 	return fi.code == code && fi.tag == di.Tag() && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchSinceTagReport(fi *selector, di DaemonInfo) bool {
+func matchSinceTagReport(fi *selector, di core.DaemonInfo) bool {
 	_, since := di.Status()
 	return since >= fi.since && fi.tag == di.Tag() && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchCodeSinceTagReport(fi *selector, di DaemonInfo) bool {
+func matchCodeSinceTagReport(fi *selector, di core.DaemonInfo) bool {
 	code, since := di.Status()
 	return fi.code == code && since >= fi.since && fi.tag == di.Tag() && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchConfigReport(fi *selector, di DaemonInfo) bool {
+func matchConfigReport(fi *selector, di core.DaemonInfo) bool {
 	return bytes.Contains(di.Config(), fi.config) && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchCodeConfigReport(fi *selector, di DaemonInfo) bool {
+func matchCodeConfigReport(fi *selector, di core.DaemonInfo) bool {
 	code, _ := di.Status()
 	return fi.code == code && bytes.Contains(di.Config(), fi.config) && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchSinceConfigReport(fi *selector, di DaemonInfo) bool {
+func matchSinceConfigReport(fi *selector, di core.DaemonInfo) bool {
 	_, since := di.Status()
 	return since >= fi.since && bytes.Contains(di.Config(), fi.config) && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchCodeSinceConfigReport(fi *selector, di DaemonInfo) bool {
+func matchCodeSinceConfigReport(fi *selector, di core.DaemonInfo) bool {
 	code, since := di.Status()
 	return fi.code == code && since >= fi.since && bytes.Contains(di.Config(), fi.config) && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchTagConfigReport(fi *selector, di DaemonInfo) bool {
+func matchTagConfigReport(fi *selector, di core.DaemonInfo) bool {
 	return fi.tag == di.Tag() && bytes.Contains(di.Config(), fi.config) && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchCodeTagConfigReport(fi *selector, di DaemonInfo) bool {
+func matchCodeTagConfigReport(fi *selector, di core.DaemonInfo) bool {
 	code, _ := di.Status()
 	return fi.code == code && fi.tag == di.Tag() && bytes.Contains(di.Config(), fi.config) && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchSinceTagConfigReport(fi *selector, di DaemonInfo) bool {
+func matchSinceTagConfigReport(fi *selector, di core.DaemonInfo) bool {
 	_, since := di.Status()
 	return since >= fi.since && fi.tag == di.Tag() && bytes.Contains(di.Config(), fi.config) && bytes.Contains(di.Report(), fi.report)
 }
 
-func matchCodeSinceTagConfigReport(fi *selector, di DaemonInfo) bool {
+func matchCodeSinceTagConfigReport(fi *selector, di core.DaemonInfo) bool {
 	code, since := di.Status()
 	return fi.code == code && since >= fi.since && fi.tag == di.Tag() && bytes.Contains(di.Config(), fi.config) && bytes.Contains(di.Report(), fi.report)
 }
