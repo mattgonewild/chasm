@@ -80,12 +80,12 @@ func marshalDaeInfo(daemon core.DaemonInfo, out *proto.DaeInfo) {
 type command uint
 
 const (
-	reviveCmd command = iota
-	pauseCmd
-	resumeCmd
-	restartCmd
-	setCmd
-	hideCmd
-	showCmd
-	killCmd
+	revive command = iota
+	pause
+	resume
+	restart
+	set
+	hide
+	show
+	kill
 )

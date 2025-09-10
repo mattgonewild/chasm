@@ -177,34 +177,34 @@ func (this forge11) Revive(_ context.Context, in *proto.ID) (*proto.Nil, error) 
 }
 
 func (this forge11) Pause(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
-	return protoNil, this.doCmd(in, pauseCmd)
+	return protoNil, this.doCmd(in, pause)
 }
 
 func (this forge11) Resume(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
-	return protoNil, this.doCmd(in, resumeCmd)
+	return protoNil, this.doCmd(in, resume)
 }
 
 func (this forge11) Restart(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
-	return protoNil, this.doCmd(in, restartCmd)
+	return protoNil, this.doCmd(in, restart)
 }
 
 func (this forge11) SetConfig(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
-	return protoNil, this.doCmd(in, setCmd)
+	return protoNil, this.doCmd(in, set)
 }
 
 func (this forge11) Hide(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
-	return protoNil, this.doCmd(in, hideCmd)
+	return protoNil, this.doCmd(in, hide)
 }
 
 func (this forge11) Show(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
-	return protoNil, this.doCmd(in, showCmd)
+	return protoNil, this.doCmd(in, show)
 }
 
 func (this forge11) doCmd(in *proto.Filter, cmd command) error {
 	core := this.core
 
 	if in.Id != nil {
-		if cmd == hideCmd || cmd == showCmd {
+		if cmd == hide || cmd == show {
 			lineage, err := core.manager.Lineage.Get(proto.MergeUUID(in.Id))
 			if err != nil {
 				return err
@@ -214,7 +214,7 @@ func (this forge11) doCmd(in *proto.Filter, cmd command) error {
 				return ErrInvalid
 			}
 
-			lineage.HideContainer(cmd == hideCmd)
+			lineage.HideContainer(cmd == hide)
 			return nil
 		}
 
@@ -224,13 +224,13 @@ func (this forge11) doCmd(in *proto.Filter, cmd command) error {
 		}
 
 		switch cmd {
-		case pauseCmd:
+		case pause:
 			return daemon.Pause()
-		case resumeCmd:
+		case resume:
 			return daemon.Resume()
-		case restartCmd:
+		case restart:
 			return daemon.Restart()
-		case setCmd:
+		case set:
 			return daemon.SetConfig(in.Payload)
 		default:
 			return ErrUnknown
@@ -240,17 +240,17 @@ func (this forge11) doCmd(in *proto.Filter, cmd command) error {
 	core.selector.LoadFilter(in)
 
 	switch cmd {
-	case pauseCmd:
+	case pause:
 		return core.manager.Pause(in.Hidden, &core.selector)
-	case resumeCmd:
+	case resume:
 		return core.manager.Resume(in.Hidden, &core.selector)
-	case restartCmd:
+	case restart:
 		return core.manager.Restart(in.Hidden, &core.selector)
-	case setCmd:
+	case set:
 		return core.manager.SetConfig(in.Hidden, &core.selector, in.Payload)
-	case hideCmd:
+	case hide:
 		return core.manager.Hide(&core.selector)
-	case showCmd:
+	case show:
 		return core.manager.Show(&core.selector)
 	default:
 		return ErrUnknown
