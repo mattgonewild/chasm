@@ -18,68 +18,34 @@ var (
 	protoRep = new(proto.RepDaeInfo)
 )
 
-func NewForge(cfg Config) proto.ForgeServer {
-	switch cfg.Chasm {
-	case 7:
-		return newForge7(cfg)
-	case 8:
-		return newForge8(cfg)
-	case 9:
-		return newForge9(cfg)
-	case 10:
-		return newForge10(cfg)
-	case 11:
-		return newForge11(cfg)
-	case 12:
-		return newForge12(cfg)
-	case 13:
-		return newForge13(cfg)
-	case 14:
-		return newForge14(cfg)
-	case 15:
-		return newForge15(cfg)
-	case 16:
-		return newForge16(cfg)
-	case 17:
-		return newForge17(cfg)
-	case 18:
-		return newForge18(cfg)
-	case 19:
-		return newForge19(cfg)
-	case 20:
-		return newForge20(cfg)
-	case 21:
-		return newForge21(cfg)
-	case 22:
-		return newForge22(cfg)
-	case 23:
-		return newForge23(cfg)
-	case 24:
-		return newForge24(cfg)
-	case 25:
-		return newForge25(cfg)
-	case 26:
-		return newForge26(cfg)
-	case 27:
-		return newForge27(cfg)
-	case 28:
-		return newForge28(cfg)
-	case 29:
-		return newForge29(cfg)
-	case 30:
-		return newForge30(cfg)
-	case 31:
-		return newForge31(cfg)
-	case 32:
-		return newForge32(cfg)
-	case 33:
-		return newForge33(cfg)
-	case 34:
-		return newForge34(cfg)
-	default:
-		panic(ErrConfig)
-	}
-}
+func NewForge7(cfg Config) proto.ForgeServer  { return newForge7(cfg) }
+func NewForge8(cfg Config) proto.ForgeServer  { return newForge8(cfg) }
+func NewForge9(cfg Config) proto.ForgeServer  { return newForge9(cfg) }
+func NewForge10(cfg Config) proto.ForgeServer { return newForge10(cfg) }
+func NewForge11(cfg Config) proto.ForgeServer { return newForge11(cfg) }
+func NewForge12(cfg Config) proto.ForgeServer { return newForge12(cfg) }
+func NewForge13(cfg Config) proto.ForgeServer { return newForge13(cfg) }
+func NewForge14(cfg Config) proto.ForgeServer { return newForge14(cfg) }
+func NewForge15(cfg Config) proto.ForgeServer { return newForge15(cfg) }
+func NewForge16(cfg Config) proto.ForgeServer { return newForge16(cfg) }
+func NewForge17(cfg Config) proto.ForgeServer { return newForge17(cfg) }
+func NewForge18(cfg Config) proto.ForgeServer { return newForge18(cfg) }
+func NewForge19(cfg Config) proto.ForgeServer { return newForge19(cfg) }
+func NewForge20(cfg Config) proto.ForgeServer { return newForge20(cfg) }
+func NewForge21(cfg Config) proto.ForgeServer { return newForge21(cfg) }
+func NewForge22(cfg Config) proto.ForgeServer { return newForge22(cfg) }
+func NewForge23(cfg Config) proto.ForgeServer { return newForge23(cfg) }
+func NewForge24(cfg Config) proto.ForgeServer { return newForge24(cfg) }
+func NewForge25(cfg Config) proto.ForgeServer { return newForge25(cfg) }
+func NewForge26(cfg Config) proto.ForgeServer { return newForge26(cfg) }
+func NewForge27(cfg Config) proto.ForgeServer { return newForge27(cfg) }
+func NewForge28(cfg Config) proto.ForgeServer { return newForge28(cfg) }
+func NewForge29(cfg Config) proto.ForgeServer { return newForge29(cfg) }
+func NewForge30(cfg Config) proto.ForgeServer { return newForge30(cfg) }
+func NewForge31(cfg Config) proto.ForgeServer { return newForge31(cfg) }
+func NewForge32(cfg Config) proto.ForgeServer { return newForge32(cfg) }
+func NewForge33(cfg Config) proto.ForgeServer { return newForge33(cfg) }
+func NewForge34(cfg Config) proto.ForgeServer { return newForge34(cfg) }
 
 func openFactory[T Daemon](symbol, path string) (Factory[T], error) {
 	plugin, err := plugin.Open(path)

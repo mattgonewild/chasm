@@ -119,11 +119,6 @@ type Config struct {
 	// Per entry ≈ 24 B.
 	Registry RegistryConfig
 
-	// The base-2 exponent (log2) of the backing chasm array. It must be within [7, 34].
-	// This directly limits how many daemons can be loaded at any given time so choose wisely.
-	// The containers that go in are ≈ 32 B. Daemons can be killed and removed as needed.
-	Chasm int
-
 	// Must not be nil.
 	OnAdd  func(DaemonInfo)
 	OnKill func(DaemonInfo)
@@ -146,68 +141,34 @@ type RegistryConfig struct {
 	Schedule int
 }
 
-func NewManager(cfg Config) Manager {
-	switch cfg.Chasm {
-	case 7:
-		return newDaemonManager7(cfg)
-	case 8:
-		return newDaemonManager8(cfg)
-	case 9:
-		return newDaemonManager9(cfg)
-	case 10:
-		return newDaemonManager10(cfg)
-	case 11:
-		return newDaemonManager11(cfg)
-	case 12:
-		return newDaemonManager12(cfg)
-	case 13:
-		return newDaemonManager13(cfg)
-	case 14:
-		return newDaemonManager14(cfg)
-	case 15:
-		return newDaemonManager15(cfg)
-	case 16:
-		return newDaemonManager16(cfg)
-	case 17:
-		return newDaemonManager17(cfg)
-	case 18:
-		return newDaemonManager18(cfg)
-	case 19:
-		return newDaemonManager19(cfg)
-	case 20:
-		return newDaemonManager20(cfg)
-	case 21:
-		return newDaemonManager21(cfg)
-	case 22:
-		return newDaemonManager22(cfg)
-	case 23:
-		return newDaemonManager23(cfg)
-	case 24:
-		return newDaemonManager24(cfg)
-	case 25:
-		return newDaemonManager25(cfg)
-	case 26:
-		return newDaemonManager26(cfg)
-	case 27:
-		return newDaemonManager27(cfg)
-	case 28:
-		return newDaemonManager28(cfg)
-	case 29:
-		return newDaemonManager29(cfg)
-	case 30:
-		return newDaemonManager30(cfg)
-	case 31:
-		return newDaemonManager31(cfg)
-	case 32:
-		return newDaemonManager32(cfg)
-	case 33:
-		return newDaemonManager33(cfg)
-	case 34:
-		return newDaemonManager34(cfg)
-	default:
-		panic(ErrConfig)
-	}
-}
+func NewManager7(cfg Config) Manager  { return newDaemonManager7(cfg) }
+func NewManager8(cfg Config) Manager  { return newDaemonManager8(cfg) }
+func NewManager9(cfg Config) Manager  { return newDaemonManager9(cfg) }
+func NewManager10(cfg Config) Manager { return newDaemonManager10(cfg) }
+func NewManager11(cfg Config) Manager { return newDaemonManager11(cfg) }
+func NewManager12(cfg Config) Manager { return newDaemonManager12(cfg) }
+func NewManager13(cfg Config) Manager { return newDaemonManager13(cfg) }
+func NewManager14(cfg Config) Manager { return newDaemonManager14(cfg) }
+func NewManager15(cfg Config) Manager { return newDaemonManager15(cfg) }
+func NewManager16(cfg Config) Manager { return newDaemonManager16(cfg) }
+func NewManager17(cfg Config) Manager { return newDaemonManager17(cfg) }
+func NewManager18(cfg Config) Manager { return newDaemonManager18(cfg) }
+func NewManager19(cfg Config) Manager { return newDaemonManager19(cfg) }
+func NewManager20(cfg Config) Manager { return newDaemonManager20(cfg) }
+func NewManager21(cfg Config) Manager { return newDaemonManager21(cfg) }
+func NewManager22(cfg Config) Manager { return newDaemonManager22(cfg) }
+func NewManager23(cfg Config) Manager { return newDaemonManager23(cfg) }
+func NewManager24(cfg Config) Manager { return newDaemonManager24(cfg) }
+func NewManager25(cfg Config) Manager { return newDaemonManager25(cfg) }
+func NewManager26(cfg Config) Manager { return newDaemonManager26(cfg) }
+func NewManager27(cfg Config) Manager { return newDaemonManager27(cfg) }
+func NewManager28(cfg Config) Manager { return newDaemonManager28(cfg) }
+func NewManager29(cfg Config) Manager { return newDaemonManager29(cfg) }
+func NewManager30(cfg Config) Manager { return newDaemonManager30(cfg) }
+func NewManager31(cfg Config) Manager { return newDaemonManager31(cfg) }
+func NewManager32(cfg Config) Manager { return newDaemonManager32(cfg) }
+func NewManager33(cfg Config) Manager { return newDaemonManager33(cfg) }
+func NewManager34(cfg Config) Manager { return newDaemonManager34(cfg) }
 
 type domain uint8
 
