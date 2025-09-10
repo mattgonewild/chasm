@@ -8,8 +8,7 @@ import (
 	"github.com/mattgonewild/chasm/proto"
 )
 
-type forge13 struct {
-	proto.UnimplementedForgeServer
+type forgeCore13 struct {
 	manager  core.Manager13
 	counter  atomic.Int64
 	daecount proto.DaeCount
@@ -22,170 +21,191 @@ type forge13 struct {
 	status   [8192]proto.Status
 }
 
+func initCore13(fc *forgeCore13, cfg core.Config) {
+	core.InitManager13(&fc.manager, cfg)
+
+	for index := range fc.ptr {
+		bi := &fc.buf[index]
+		bi.Id = &fc.id[index]
+		bi.Status = &fc.status[index]
+
+		fc.ptr[index] = bi
+	}
+}
+
+type forge13 struct {
+	proto.UnimplementedForgeServer
+	core *forgeCore13
+}
+
 func newForge13(cfg core.Config) *forge13 {
 	forge := new(forge13)
-	core.InitManager13(&forge.manager, cfg)
-
-	for index := range forge.ptr {
-		bi := &forge.buf[index]
-		bi.Id = &forge.id[index]
-		bi.Status = &forge.status[index]
-
-		forge.ptr[index] = bi
-	}
-
+	forge.core = new(forgeCore13)
+	initCore13(forge.core, cfg)
 	return forge
 }
 
-func (this *forge13) AddSymbol(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
+func (this forge13) AddSymbol(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
 	factory, err := openFactory[core.SymbolDaemon](in.Symbol, in.Path)
 	if err != nil {
 		return protoNil, err
 	}
 
-	if err := this.manager.AddSymbol(factory); err != nil {
+	core := this.core
+	if err := core.manager.AddSymbol(factory); err != nil {
 		return protoNil, err
 	}
 
-	this.counter.Add(1)
+	core.counter.Add(1)
 	return protoNil, nil
 }
 
-func (this *forge13) AddBook(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
+func (this forge13) AddBook(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
 	factory, err := openFactory[core.BookDaemon](in.Symbol, in.Path)
 	if err != nil {
 		return protoNil, err
 	}
 
-	if err := this.manager.AddBook(factory); err != nil {
+	core := this.core
+	if err := core.manager.AddBook(factory); err != nil {
 		return protoNil, err
 	}
 
-	this.counter.Add(1)
+	core.counter.Add(1)
 	return protoNil, nil
 }
 
-func (this *forge13) AddCandle(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
+func (this forge13) AddCandle(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
 	factory, err := openFactory[core.CandleDaemon](in.Symbol, in.Path)
 	if err != nil {
 		return protoNil, err
 	}
 
-	if err := this.manager.AddCandle(factory); err != nil {
+	core := this.core
+	if err := core.manager.AddCandle(factory); err != nil {
 		return protoNil, err
 	}
 
-	this.counter.Add(1)
+	core.counter.Add(1)
 	return protoNil, nil
 }
 
-func (this *forge13) AddTrade(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
+func (this forge13) AddTrade(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
 	factory, err := openFactory[core.TradeDaemon](in.Symbol, in.Path)
 	if err != nil {
 		return protoNil, err
 	}
 
-	if err := this.manager.AddTrade(factory); err != nil {
+	core := this.core
+	if err := core.manager.AddTrade(factory); err != nil {
 		return protoNil, err
 	}
 
-	this.counter.Add(1)
+	core.counter.Add(1)
 	return protoNil, nil
 }
 
-func (this *forge13) AddSchedule(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
+func (this forge13) AddSchedule(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
 	factory, err := openFactory[core.ScheduleDaemon](in.Symbol, in.Path)
 	if err != nil {
 		return protoNil, err
 	}
 
-	if err := this.manager.AddSchedule(factory); err != nil {
+	core := this.core
+	if err := core.manager.AddSchedule(factory); err != nil {
 		return protoNil, err
 	}
 
-	this.counter.Add(1)
+	core.counter.Add(1)
 	return protoNil, nil
 }
 
-func (this *forge13) AddData(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
+func (this forge13) AddData(_ context.Context, in *proto.BinInfo) (*proto.Nil, error) {
 	factory, err := openFactory[core.DataDaemon](in.Symbol, in.Path)
 	if err != nil {
 		return protoNil, err
 	}
 
-	if err := this.manager.AddData(factory); err != nil {
+	core := this.core
+	if err := core.manager.AddData(factory); err != nil {
 		return protoNil, err
 	}
 
-	this.counter.Add(1)
+	core.counter.Add(1)
 	return protoNil, nil
 }
 
-func (this *forge13) Alive(_ context.Context, _ *proto.Nil) (*proto.DaeCount, error) {
-	this.daecount.Total = this.counter.Load()
-	return &this.daecount, nil
+func (this forge13) Alive(_ context.Context, _ *proto.Nil) (*proto.DaeCount, error) {
+	core := this.core
+	core.daecount.Total = core.counter.Load()
+	return &core.daecount, nil
 }
 
-func (this *forge13) DaemonInfo(_ context.Context, in *proto.Filter) (*proto.RepDaeInfo, error) {
+func (this forge13) DaemonInfo(_ context.Context, in *proto.Filter) (*proto.RepDaeInfo, error) {
+	core := this.core
+
 	if in.Id != nil {
-		daemon, err := this.manager.Get(proto.MergeUUID(in.Id))
+		daemon, err := core.manager.Get(proto.MergeUUID(in.Id))
 		if err != nil {
 			return protoRep, err
 		}
 
-		marshalDaeInfo(daemon, &this.buf[0])
-		this.scratch.Daemon = this.ptr[0:1]
-		return &this.scratch, nil
+		marshalDaeInfo(daemon, &core.buf[0])
+		core.scratch.Daemon = core.ptr[0:1]
+		return &core.scratch, nil
 	}
 
-	this.selector.LoadFilter(in)
-	got := this.manager.DaemonInfo(in.Hidden, &this.selector)
+	core.selector.LoadFilter(in)
+	got := core.manager.DaemonInfo(in.Hidden, &core.selector)
 
 	for index := range got {
-		marshalDaeInfo(got[index], &this.buf[index])
+		marshalDaeInfo(got[index], &core.buf[index])
 	}
 
-	this.scratch.Daemon = this.ptr[0:len(got)]
-	return &this.scratch, nil
+	core.scratch.Daemon = core.ptr[0:len(got)]
+	return &core.scratch, nil
 }
 
-func (this *forge13) Revive(_ context.Context, in *proto.ID) (*proto.Nil, error) {
-	if err := this.manager.Revive(proto.MergeUUID(in)); err != nil {
+func (this forge13) Revive(_ context.Context, in *proto.ID) (*proto.Nil, error) {
+	core := this.core
+	if err := core.manager.Revive(proto.MergeUUID(in)); err != nil {
 		return protoNil, err
 	}
 
-	this.counter.Add(1)
+	core.counter.Add(1)
 	return protoNil, nil
 }
 
-func (this *forge13) Pause(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
+func (this forge13) Pause(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
 	return protoNil, this.doCmd(in, pauseCmd)
 }
 
-func (this *forge13) Resume(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
+func (this forge13) Resume(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
 	return protoNil, this.doCmd(in, resumeCmd)
 }
 
-func (this *forge13) Restart(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
+func (this forge13) Restart(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
 	return protoNil, this.doCmd(in, restartCmd)
 }
 
-func (this *forge13) SetConfig(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
+func (this forge13) SetConfig(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
 	return protoNil, this.doCmd(in, setCmd)
 }
 
-func (this *forge13) Hide(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
+func (this forge13) Hide(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
 	return protoNil, this.doCmd(in, hideCmd)
 }
 
-func (this *forge13) Show(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
+func (this forge13) Show(_ context.Context, in *proto.Filter) (*proto.Nil, error) {
 	return protoNil, this.doCmd(in, showCmd)
 }
 
-func (this *forge13) doCmd(in *proto.Filter, cmd command) error {
+func (this forge13) doCmd(in *proto.Filter, cmd command) error {
+	core := this.core
+
 	if in.Id != nil {
 		if cmd == hideCmd || cmd == showCmd {
-			lineage, err := this.manager.Lineage.Get(proto.MergeUUID(in.Id))
+			lineage, err := core.manager.Lineage.Get(proto.MergeUUID(in.Id))
 			if err != nil {
 				return err
 			}
@@ -198,7 +218,7 @@ func (this *forge13) doCmd(in *proto.Filter, cmd command) error {
 			return nil
 		}
 
-		daemon, err := this.manager.Get(proto.MergeUUID(in.Id))
+		daemon, err := core.manager.Get(proto.MergeUUID(in.Id))
 		if err != nil {
 			return err
 		}
@@ -217,35 +237,36 @@ func (this *forge13) doCmd(in *proto.Filter, cmd command) error {
 		}
 	}
 
-	this.selector.LoadFilter(in)
+	core.selector.LoadFilter(in)
 
 	switch cmd {
 	case pauseCmd:
-		return this.manager.Pause(in.Hidden, &this.selector)
+		return core.manager.Pause(in.Hidden, &core.selector)
 	case resumeCmd:
-		return this.manager.Resume(in.Hidden, &this.selector)
+		return core.manager.Resume(in.Hidden, &core.selector)
 	case restartCmd:
-		return this.manager.Restart(in.Hidden, &this.selector)
+		return core.manager.Restart(in.Hidden, &core.selector)
 	case setCmd:
-		return this.manager.SetConfig(in.Hidden, &this.selector, in.Payload)
+		return core.manager.SetConfig(in.Hidden, &core.selector, in.Payload)
 	case hideCmd:
-		return this.manager.Hide(&this.selector)
+		return core.manager.Hide(&core.selector)
 	case showCmd:
-		return this.manager.Show(&this.selector)
+		return core.manager.Show(&core.selector)
 	default:
 		return ErrUnknown
 	}
 }
 
-func (this *forge13) Kill(_ context.Context, in *proto.ID) (*proto.Nil, error) {
-	if err := this.manager.Kill(proto.MergeUUID(in)); err != nil {
+func (this forge13) Kill(_ context.Context, in *proto.ID) (*proto.Nil, error) {
+	core := this.core
+	if err := core.manager.Kill(proto.MergeUUID(in)); err != nil {
 		return protoNil, err
 	}
 
-	this.counter.Add(-1)
+	core.counter.Add(-1)
 	return protoNil, nil
 }
 
-func (this *forge13) Shutdown(_ context.Context, _ *proto.Nil) (*proto.Nil, error) {
-	return protoNil, this.manager.Shutdown()
+func (this forge13) Shutdown(_ context.Context, _ *proto.Nil) (*proto.Nil, error) {
+	return protoNil, this.core.manager.Shutdown()
 }
