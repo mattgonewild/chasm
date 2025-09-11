@@ -2,6 +2,10 @@ package core
 
 import "math"
 
+type Event interface {
+	SymbolEvent | BookEvent | CandleEvent | TradeEvent
+}
+
 type SymbolEvent struct {
 	Online        bool
 	Symbol        string
