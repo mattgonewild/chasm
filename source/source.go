@@ -139,9 +139,9 @@ func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.K
 	}
 
 	var (
-		ruf  [4096]byte
+		ruf  [512]byte
 		r    int
-		step int = 2
+		step int = 1
 		end  int = len(ruf) - step
 	)
 
