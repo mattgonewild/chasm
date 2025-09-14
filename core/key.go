@@ -2,6 +2,9 @@ package core
 
 import "time"
 
+// Key encodes a symbol and an optional interval.
+//
+// The symbol must consist only of [ A-Z . - ] and be at most 10 characters long.
 type Key uint
 
 const (
@@ -14,11 +17,11 @@ const (
 )
 
 var (
-	lookup  [256]uint8 = nl()
-	reverse [32]uint8  = nr()
+	lookup  [256]uint8 = newLookup()
+	reverse [32]uint8  = newReverse()
 )
 
-func nl() [256]uint8 {
+func newLookup() [256]uint8 {
 	var (
 		alphabet = uint8(len(alphaUsed))
 		lookup   [256]uint8
@@ -31,7 +34,7 @@ func nl() [256]uint8 {
 	return lookup
 }
 
-func nr() [32]uint8 {
+func newReverse() [32]uint8 {
 	var (
 		alphabet = uint8(len(alphaUsed))
 		reverse  [32]uint8
@@ -44,7 +47,9 @@ func nr() [32]uint8 {
 	return reverse
 }
 
-// symbol should only contain ['A-Z', '.', '-'] and be no longer than 10 characters
+// EncodeSymbolKey encodes a symbol into a Key.
+//
+// The symbol must consist only of [ A-Z . - ] and be at most 10 characters long.
 func EncodeSymbolKey(symbol string) Key {
 	var (
 		sink   uint
@@ -58,6 +63,7 @@ func EncodeSymbolKey(symbol string) Key {
 	return Key(sink)
 }
 
+// DecodeSymbolKey decodes a Key back to its symbol.
 func DecodeSymbolKey(key Key) string {
 	var (
 		buf [10]byte
@@ -79,9 +85,10 @@ func DecodeSymbolKey(key Key) string {
 	return string(buf[:n])
 }
 
-// symbol should only contain ['A-Z', '.', '-'] and be no longer than 10 characters
+// EncodeCandleKey encodes a symbol and interval into a Key.
 //
-// interval should be no greater than one day
+// The symbol must consist only of [ A-Z . - ] and be at most 10 characters long,
+// while interval should be no greater than a day.
 func EncodeCandleKey(symbol string, interval time.Duration) Key {
 	var (
 		sink   uint
@@ -95,6 +102,7 @@ func EncodeCandleKey(symbol string, interval time.Duration) Key {
 	return Key((sink << interBit) | uint(interval/time.Minute))
 }
 
+// DecodeCandleKey decodes a Key back to its symbol and interval.
 func DecodeCandleKey(key Key) (string, time.Duration) {
 	var (
 		buf [10]byte
