@@ -23,7 +23,7 @@ type Writer[T core.Event] interface {
 	Close() error
 }
 
-const senderBufCap = 32768
+const senderBufCap int = 32768
 
 type sharedSender struct {
 	sync.Mutex
@@ -148,30 +148,30 @@ func (this *sink) Trade(key core.Key) Writer[core.TradeEvent] {
 func (this *sink) Close() error { return this.sender.release() }
 
 const (
-	maxKeyLen  = 10
-	maxUintLen = 10
-	maxTimeLen = 20
+	maxKeyLen  int = 10
+	maxUintLen int = 10
+	maxTimeLen int = 20
 
-	measurement = 2
-	keyFi       = 2 + maxKeyLen + 1
-	boolFi      = 3
-	intFi       = 2 + maxUintLen + 1
-	timestamp   = 1 + maxTimeLen + 1
+	measurement int = 2
+	keyFi       int = 2 + maxKeyLen + 1
+	boolFi      int = 3
+	intFi       int = 2 + maxUintLen + 1
+	timestamp   int = 1 + maxTimeLen + 1
 
-	symbolLineMax = measurement +
+	symbolLineMax int = measurement +
 		keyFi + 1 +
 		boolFi + 1 +
 		intFi + 1 +
 		intFi +
 		timestamp
 
-	bookLineMax = measurement +
+	bookLineMax int = measurement +
 		keyFi + 1 +
 		intFi + 1 +
 		intFi +
 		timestamp
 
-	candleLineMax = measurement +
+	candleLineMax int = measurement +
 		keyFi + 1 +
 		intFi + 1 +
 		intFi + 1 +
@@ -179,7 +179,7 @@ const (
 		intFi +
 		timestamp
 
-	tradeLineMax = measurement +
+	tradeLineMax int = measurement +
 		keyFi + 1 +
 		boolFi +
 		timestamp
@@ -207,11 +207,11 @@ type qdbSymbolWriter struct {
 
 func (this *qdbSymbolWriter) Write(event core.SymbolEvent) error {
 	const (
-		table        = Symbol
-		symbol       = Symbol
-		online       = Online
-		minOrder     = MinOrder
-		minIncrement = MinIncrement
+		table        byte = Symbol
+		symbol       byte = Symbol
+		online       byte = Online
+		minOrder     byte = MinOrder
+		minIncrement byte = MinIncrement
 	)
 
 	this.sender.Lock()
@@ -245,10 +245,10 @@ type qdbBookWriter struct {
 
 func (this *qdbBookWriter) Write(event core.BookEvent) error {
 	const (
-		table  = Book
-		symbol = Symbol
-		bid    = Bid
-		ask    = Ask
+		table  byte = Book
+		symbol byte = Symbol
+		bid    byte = Bid
+		ask    byte = Ask
 	)
 
 	this.sender.Lock()
@@ -280,12 +280,12 @@ type qdbCandleWriter struct {
 
 func (this *qdbCandleWriter) Write(event core.CandleEvent) error {
 	const (
-		table  = Candle
-		symbol = Symbol
-		open   = Open
-		high   = High
-		low    = Low
-		close  = Close
+		table  byte = Candle
+		symbol byte = Symbol
+		open   byte = Open
+		high   byte = High
+		low    byte = Low
+		close  byte = Close
 	)
 
 	this.sender.Lock()
@@ -321,9 +321,9 @@ type qdbTradeWriter struct {
 
 func (this *qdbTradeWriter) Write(event core.TradeEvent) error {
 	const (
-		table  = Trade
-		symbol = Symbol
-		buy    = Buy
+		table  byte = Trade
+		symbol byte = Symbol
+		buy    byte = Buy
 	)
 
 	this.sender.Lock()

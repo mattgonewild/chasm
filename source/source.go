@@ -98,7 +98,7 @@ func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.K
 		ab = func(b []byte) { n += copy(buf[n:], b) }
 	)
 
-	const lineEnd = "\r\n"
+	const lineEnd string = "\r\n"
 
 	as("GET ")
 	as(proto.Endpoint())
@@ -192,11 +192,10 @@ func (this *bufWebSockReader[T]) bufferTextFrame() int {
 		fmask byte = 0x80
 		omask byte = 0x0F
 		hmask byte = 0x7F
-
-		text byte = 0x1
-		cont byte = 0x0
-		ping byte = 0x9
-		pong byte = 0xA
+		text  byte = 0x1
+		cont  byte = 0x0
+		ping  byte = 0x9
+		pong  byte = 0xA
 	)
 	var length int
 start:
