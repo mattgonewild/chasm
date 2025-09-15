@@ -13,16 +13,17 @@ import (
 
 type (
 	Source interface {
-		Symbol(key core.Key) (Reader[core.SymbolEvent], error)
-		Book(key core.Key) (Reader[core.BookEvent], error)
-		Candle(key core.Key) (Reader[core.CandleEvent], error)
-		Trade(key core.Key) (Reader[core.TradeEvent], error)
+		Symbol(key core.Key) Reader[core.SymbolEvent]
+		Book(key core.Key) Reader[core.BookEvent]
+		Candle(key core.Key) Reader[core.CandleEvent]
+		Trade(key core.Key) Reader[core.TradeEvent]
 	}
 
 	Reader[T core.Event] interface {
+		Open() error
+		Close() error
 		Read() T
 		Next() error
-		Close() error
 	}
 
 	Proto[T core.Event] interface {
@@ -57,16 +58,16 @@ func NewSource(
 	}
 }
 
-func (this *source) Symbol(key core.Key) (Reader[core.SymbolEvent], error) {
+func (this *source) Symbol(key core.Key) Reader[core.SymbolEvent] {
 	return newBufWebSockReader(this.origin, this.symbol, key)
 }
-func (this *source) Book(key core.Key) (Reader[core.BookEvent], error) {
+func (this *source) Book(key core.Key) Reader[core.BookEvent] {
 	return newBufWebSockReader(this.origin, this.book, key)
 }
-func (this *source) Candle(key core.Key) (Reader[core.CandleEvent], error) {
+func (this *source) Candle(key core.Key) Reader[core.CandleEvent] {
 	return newBufWebSockReader(this.origin, this.candle, key)
 }
-func (this *source) Trade(key core.Key) (Reader[core.TradeEvent], error) {
+func (this *source) Trade(key core.Key) Reader[core.TradeEvent] {
 	return newBufWebSockReader(this.origin, this.trade, key)
 }
 
@@ -77,6 +78,7 @@ type bufWebSockReader[T core.Event] struct {
 	buf     [8192]byte
 	mask    uint32
 	key     core.Key
+	origin  string
 }
 
 var (
@@ -84,10 +86,18 @@ var (
 	ErrBadRead    = errors.New("matt::chasm::source: bad read")
 )
 
-func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.Key) (Reader[T], error) {
-	conn, err := tls.Dial("tcp4", origin, nil)
+func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.Key) Reader[T] {
+	return &bufWebSockReader[T]{
+		proto:  proto,
+		key:    key,
+		origin: origin,
+	}
+}
+
+func (this *bufWebSockReader[T]) Open() error {
+	conn, err := tls.Dial("tcp4", this.origin, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var (
@@ -101,12 +111,12 @@ func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.K
 	const lineEnd string = "\r\n"
 
 	as("GET ")
-	as(proto.Endpoint())
+	as(this.proto.Endpoint())
 	as(" HTTP/1.1")
 	as(lineEnd)
 
 	as("Host: ")
-	as(origin)
+	as(this.origin)
 	as(lineEnd)
 
 	as("Upgrade: websocket")
@@ -135,7 +145,7 @@ func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.K
 	_, err = conn.Write(buf[:n])
 	if err != nil {
 		conn.Close()
-		return nil, err
+		return err
 	}
 
 	var (
@@ -148,7 +158,7 @@ func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.K
 	for r < end {
 		n, err := conn.Read(ruf[r : r+step])
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		r += n
@@ -159,15 +169,76 @@ func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.K
 
 	if !strings.Contains(string(ruf[:r]), " 101 ") {
 		conn.Close()
-		return nil, ErrBadUpgrade
+		return ErrBadUpgrade
 	}
 
-	return &bufWebSockReader[T]{
-		conn:  conn,
-		proto: proto,
-		mask:  binary.LittleEndian.Uint32(raw[:4]),
-		key:   key,
-	}, nil
+	this.conn = conn
+	this.mask = binary.LittleEndian.Uint32(raw[:4])
+	this.writeTextFrame(this.proto.Subscribe(this.key))
+	return nil
+}
+
+func (this *bufWebSockReader[T]) Close() error {
+	this.writeTextFrame(this.proto.Unsubscribe(this.key))
+	this.writeCloseFrame()
+	return this.conn.Close()
+}
+
+func (this *bufWebSockReader[T]) writeTextFrame(data []byte) {
+	var buf [8 + 4096]byte
+	buf[0] = 0x80 | 1
+	buf[1] = 0x80 | 126
+
+	var length = len(data)
+	buf[2] = byte(length >> 8)
+	buf[3] = byte(length)
+
+	var mask = this.mask
+	mask ^= mask << 13
+	mask ^= mask >> 17
+	mask ^= mask << 5
+	if mask == 0 {
+		mask = 1
+	}
+	this.mask = mask
+
+	buf[4] = byte(mask)
+	buf[5] = byte(mask >> 8)
+	buf[6] = byte(mask >> 16)
+	buf[7] = byte(mask >> 24)
+
+	for index := range length {
+		buf[8+index] = data[index] ^ buf[4+(index&3)]
+	}
+
+	this.conn.Write(buf[:8+length])
+}
+
+func (this *bufWebSockReader[T]) writeCloseFrame() {
+	var buf [8]byte
+	buf[0] = 0x80 | 8
+	buf[1] = 0x80 | 2
+
+	var mask = this.mask
+	mask ^= mask << 13
+	mask ^= mask >> 17
+	mask ^= mask << 5
+	if mask == 0 {
+		mask = 1
+	}
+	this.mask = mask
+
+	buf[2] = byte(mask)
+	buf[3] = byte(mask >> 8)
+	buf[4] = byte(mask >> 16)
+	buf[5] = byte(mask >> 24)
+
+	const closeNormal uint16 = 1000
+	high, low := closeNormal>>8, closeNormal
+	buf[6] = byte(high) ^ buf[2]
+	buf[7] = byte(low) ^ buf[3]
+
+	this.conn.Write(buf[:])
 }
 
 func (this *bufWebSockReader[T]) Read() T { return this.decoded }
@@ -346,67 +417,4 @@ start:
 
 		return length
 	}
-}
-
-func (this *bufWebSockReader[T]) Close() error {
-	this.writeTextFrame(this.proto.Unsubscribe(this.key))
-	this.writeCloseFrame()
-	return this.conn.Close()
-}
-
-func (this *bufWebSockReader[T]) writeTextFrame(data []byte) {
-	var buf [8 + 4096]byte
-	buf[0] = 0x80 | 1
-	buf[1] = 0x80 | 126
-
-	var length = len(data)
-	buf[2] = byte(length >> 8)
-	buf[3] = byte(length)
-
-	var mask = this.mask
-	mask ^= mask << 13
-	mask ^= mask >> 17
-	mask ^= mask << 5
-	if mask == 0 {
-		mask = 1
-	}
-	this.mask = mask
-
-	buf[4] = byte(mask)
-	buf[5] = byte(mask >> 8)
-	buf[6] = byte(mask >> 16)
-	buf[7] = byte(mask >> 24)
-
-	for index := range length {
-		buf[8+index] = data[index] ^ buf[4+(index&3)]
-	}
-
-	this.conn.Write(buf[:8+length])
-}
-
-func (this *bufWebSockReader[T]) writeCloseFrame() {
-	var buf [8]byte
-	buf[0] = 0x80 | 8
-	buf[1] = 0x80 | 2
-
-	var mask = this.mask
-	mask ^= mask << 13
-	mask ^= mask >> 17
-	mask ^= mask << 5
-	if mask == 0 {
-		mask = 1
-	}
-	this.mask = mask
-
-	buf[2] = byte(mask)
-	buf[3] = byte(mask >> 8)
-	buf[4] = byte(mask >> 16)
-	buf[5] = byte(mask >> 24)
-
-	const closeNormal uint16 = 1000
-	high, low := closeNormal>>8, closeNormal
-	buf[6] = byte(high) ^ buf[2]
-	buf[7] = byte(low) ^ buf[3]
-
-	this.conn.Write(buf[:])
 }

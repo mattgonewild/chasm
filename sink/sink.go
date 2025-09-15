@@ -1,11 +1,9 @@
 package sink
 
 import (
-	"errors"
 	"math/bits"
 	"net"
 	"sync"
-	"sync/atomic"
 
 	"github.com/mattgonewild/chasm/core"
 )
@@ -15,98 +13,11 @@ type Sink interface {
 	Book(key core.Key) Writer[core.BookEvent]
 	Candle(key core.Key) Writer[core.CandleEvent]
 	Trade(key core.Key) Writer[core.TradeEvent]
-	Close() error
 }
 
 type Writer[T core.Event] interface {
 	Write(event T) error
-	Close() error
-}
-
-const senderBufCap int = 32768
-
-type sharedSender struct {
-	sync.Mutex
-	conn   net.Conn
-	length int
-	buf    [senderBufCap]byte
-	atomic.Int64
-}
-
-func (this *sharedSender) flush() error {
-	length := this.length
-	if length == 0 {
-		return nil
-	}
-	this.length = 0
-
-	_, err := this.conn.Write(this.buf[:length])
-	return err
-}
-
-func (this *sharedSender) putTable(name byte) {
-	this.putByte(name)
-	this.putByte(' ')
-}
-
-func (this *sharedSender) putInt(column byte, value uint) {
-	this.putByte(column)
-	this.putByte('=')
-	this.putDigit(value)
-	this.putByte('i')
-}
-
-func (this *sharedSender) putBool(column byte, true bool) {
-	this.putByte(column)
-	this.putByte('=')
-	if true {
-		this.putByte('t')
-	} else {
-		this.putByte('f')
-	}
-}
-
-func (this *sharedSender) putAt(unixTime int64) {
-	this.putByte(' ')
-	this.putDigit(uint(unixTime))
-	this.putByte('\n')
-}
-
-func (this *sharedSender) putByte(value byte) { this.buf[this.length] = value; this.length++ }
-
-func (this *sharedSender) putDigit(value uint) {
-	n := digitCount(value)
-	this.length = this.length + n
-	cursor := this.length
-
-	for value >= 100 {
-		quot := value / 100
-		rem := value - (quot * 100)
-		value = quot
-
-		pair := twoDigitMap[rem]
-		cursor -= 2
-		this.buf[cursor] = byte(pair >> 8)
-		this.buf[cursor+1] = byte(pair)
-	}
-
-	if value < 10 {
-		cursor--
-		this.buf[cursor] = byte('0' + value)
-	} else {
-		pair := twoDigitMap[value]
-		cursor -= 2
-		this.buf[cursor] = byte(pair >> 8)
-		this.buf[cursor+1] = byte(pair)
-	}
-}
-
-func (this *sharedSender) release() error {
-	if this.Add(-1) == 0 {
-		return errors.Join(this.flush(), this.conn.Close())
-	}
-
-	return nil
+	Flush() error
 }
 
 type sink struct {
@@ -120,32 +31,25 @@ func NewSink(location string) (Sink, error) {
 	}
 
 	sink := new(sink)
-	sink.sender.Add(1)
 	sink.sender.conn = conn
 	return sink, nil
 }
 
 func (this *sink) Symbol(key core.Key) Writer[core.SymbolEvent] {
-	this.sender.Add(1)
 	return &qdbSymbolWriter{key: key, sender: &this.sender}
 }
 
 func (this *sink) Book(key core.Key) Writer[core.BookEvent] {
-	this.sender.Add(1)
 	return &qdbBookWriter{key: key, sender: &this.sender}
 }
 
 func (this *sink) Candle(key core.Key) Writer[core.CandleEvent] {
-	this.sender.Add(1)
 	return &qdbCandleWriter{key: key, sender: &this.sender}
 }
 
 func (this *sink) Trade(key core.Key) Writer[core.TradeEvent] {
-	this.sender.Add(1)
 	return &qdbTradeWriter{key: key, sender: &this.sender}
 }
-
-func (this *sink) Close() error { return this.sender.release() }
 
 const (
 	maxKeyLen  int = 10
@@ -236,7 +140,12 @@ func (this *qdbSymbolWriter) Write(event core.SymbolEvent) error {
 	return nil
 }
 
-func (this *qdbSymbolWriter) Close() error { return this.sender.release() }
+func (this *qdbSymbolWriter) Flush() error {
+	this.sender.Lock()
+	err := this.sender.flush()
+	this.sender.Unlock()
+	return err
+}
 
 type qdbBookWriter struct {
 	key    core.Key
@@ -271,7 +180,12 @@ func (this *qdbBookWriter) Write(event core.BookEvent) error {
 	return nil
 }
 
-func (this *qdbBookWriter) Close() error { return this.sender.release() }
+func (this *qdbBookWriter) Flush() error {
+	this.sender.Lock()
+	err := this.sender.flush()
+	this.sender.Unlock()
+	return err
+}
 
 type qdbCandleWriter struct {
 	key    core.Key
@@ -312,7 +226,12 @@ func (this *qdbCandleWriter) Write(event core.CandleEvent) error {
 	return nil
 }
 
-func (this *qdbCandleWriter) Close() error { return this.sender.release() }
+func (this *qdbCandleWriter) Flush() error {
+	this.sender.Lock()
+	err := this.sender.flush()
+	this.sender.Unlock()
+	return err
+}
 
 type qdbTradeWriter struct {
 	key    core.Key
@@ -344,7 +263,89 @@ func (this *qdbTradeWriter) Write(event core.TradeEvent) error {
 	return nil
 }
 
-func (this *qdbTradeWriter) Close() error { return this.sender.release() }
+func (this *qdbTradeWriter) Flush() error {
+	this.sender.Lock()
+	err := this.sender.flush()
+	this.sender.Unlock()
+	return err
+}
+
+const senderBufCap int = 32768
+
+type sharedSender struct {
+	sync.Mutex
+	conn   net.Conn
+	length int
+	buf    [senderBufCap]byte
+}
+
+func (this *sharedSender) flush() error {
+	length := this.length
+	if length == 0 {
+		return nil
+	}
+	this.length = 0
+
+	_, err := this.conn.Write(this.buf[:length])
+	return err
+}
+
+func (this *sharedSender) putTable(name byte) {
+	this.putByte(name)
+	this.putByte(' ')
+}
+
+func (this *sharedSender) putInt(column byte, value uint) {
+	this.putByte(column)
+	this.putByte('=')
+	this.putDigit(value)
+	this.putByte('i')
+}
+
+func (this *sharedSender) putBool(column byte, true bool) {
+	this.putByte(column)
+	this.putByte('=')
+	if true {
+		this.putByte('t')
+	} else {
+		this.putByte('f')
+	}
+}
+
+func (this *sharedSender) putAt(unixTime int64) {
+	this.putByte(' ')
+	this.putDigit(uint(unixTime))
+	this.putByte('\n')
+}
+
+func (this *sharedSender) putByte(value byte) { this.buf[this.length] = value; this.length++ }
+
+func (this *sharedSender) putDigit(value uint) {
+	n := digitCount(value)
+	this.length = this.length + n
+	cursor := this.length
+
+	for value >= 100 {
+		quot := value / 100
+		rem := value - (quot * 100)
+		value = quot
+
+		pair := twoDigitMap[rem]
+		cursor -= 2
+		this.buf[cursor] = byte(pair >> 8)
+		this.buf[cursor+1] = byte(pair)
+	}
+
+	if value < 10 {
+		cursor--
+		this.buf[cursor] = byte('0' + value)
+	} else {
+		pair := twoDigitMap[value]
+		cursor -= 2
+		this.buf[cursor] = byte(pair >> 8)
+		this.buf[cursor+1] = byte(pair)
+	}
+}
 
 var (
 	powerOfTen  [20]uint    = newPowerOfTen()
