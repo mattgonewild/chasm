@@ -5,26 +5,29 @@ import "time"
 // Key encodes a symbol and an optional interval.
 //
 // The symbol must consist only of [ A-Z . - ] and be at most 10 characters long.
-type Key uint
+type Key = uint64
 
 const (
-	alphaUsed  string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-"
-	base       uint8  = 1
-	bitPerCode uint   = 5
-	codeMask   uint   = (1 << bitPerCode) - 1
-	interBit   uint   = 11
-	interMask  uint   = (1 << interBit) - 1
+	alphaUsed string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-"
+	base      byte   = 1
+
+	bitPerCode uint64 = 5
+	codeMask   uint64 = (1 << bitPerCode) - 1
+
+	intBit  uint64        = 11
+	intMask uint64        = (1 << intBit) - 1
+	intStep time.Duration = time.Minute
 )
 
 var (
-	lookup  [256]uint8 = newLookup()
-	reverse [32]uint8  = newReverse()
+	lookup  [256]byte = newLookup()
+	reverse [32]byte  = newReverse()
 )
 
-func newLookup() [256]uint8 {
+func newLookup() [256]byte {
 	var (
-		alphabet = uint8(len(alphaUsed))
-		lookup   [256]uint8
+		alphabet = byte(len(alphaUsed))
+		lookup   [256]byte
 	)
 
 	for index := range alphabet {
@@ -34,10 +37,10 @@ func newLookup() [256]uint8 {
 	return lookup
 }
 
-func newReverse() [32]uint8 {
+func newReverse() [32]byte {
 	var (
-		alphabet = uint8(len(alphaUsed))
-		reverse  [32]uint8
+		alphabet = byte(len(alphaUsed))
+		reverse  [32]byte
 	)
 
 	for index := range alphabet {
@@ -52,12 +55,12 @@ func newReverse() [32]uint8 {
 // The symbol must consist only of [ A-Z . - ] and be at most 10 characters long.
 func EncodeSymbolKey(symbol string) Key {
 	var (
-		sink   uint
-		length = uint(len(symbol))
+		sink   uint64
+		length = uint64(len(symbol))
 	)
 
 	for index := range length {
-		sink |= uint(lookup[symbol[index]]) << (index * bitPerCode)
+		sink |= uint64(lookup[symbol[index]]) << (index * bitPerCode)
 	}
 
 	return Key(sink)
@@ -68,7 +71,7 @@ func DecodeSymbolKey(key Key) string {
 	var (
 		buf [10]byte
 		n   int
-		k   = uint(key)
+		k   = uint64(key)
 	)
 
 	for index := range buf {
@@ -91,15 +94,15 @@ func DecodeSymbolKey(key Key) string {
 // while interval should be no greater than a day.
 func EncodeCandleKey(symbol string, interval time.Duration) Key {
 	var (
-		sink   uint
-		length = uint(len(symbol))
+		sink   uint64
+		length = uint64(len(symbol))
 	)
 
 	for index := range length {
-		sink |= uint(lookup[symbol[index]]) << (index * bitPerCode)
+		sink |= uint64(lookup[symbol[index]]) << (index * bitPerCode)
 	}
 
-	return Key((sink << interBit) | uint(interval/time.Minute))
+	return Key((sink << intBit) | uint64(interval/intStep))
 }
 
 // DecodeCandleKey decodes a Key back to its symbol and interval.
@@ -107,7 +110,7 @@ func DecodeCandleKey(key Key) (string, time.Duration) {
 	var (
 		buf [10]byte
 		n   int
-		k   = uint(key) >> interBit
+		k   = uint64(key) >> intBit
 	)
 
 	for index := range buf {
@@ -121,5 +124,16 @@ func DecodeCandleKey(key Key) (string, time.Duration) {
 		k >>= bitPerCode
 	}
 
-	return string(buf[:n]), time.Duration((uint(key) & interMask)) * time.Minute
+	return string(buf[:n]), time.Duration((uint64(key) & intMask)) * intStep
+}
+
+// OkInterval validates that a duration given in nanoseconds is acceptable for use in a Key.
+// It must be a positive multiple of one minute (not zero) and no greater than 2047 minutes.
+func OkInterval(interval int64) bool {
+	const (
+		step = int64(intStep)
+		max  = int64(intMask) * step
+	)
+
+	return (interval >= step) && (interval <= max) && (interval%step == 0)
 }

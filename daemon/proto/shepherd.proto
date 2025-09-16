@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/mattgonewild/chasm/daemon/proto;proto";
+
+message ShepherdConfig {
+    fixed32            limit    = 1;
+    map<fixed64, bool> ignore   = 2;
+    repeated sfixed32  interval = 3;
+}
