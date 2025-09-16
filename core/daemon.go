@@ -24,7 +24,6 @@ type (
 		Config() []byte
 		Status() (int, int64)
 		Report() []byte
-		Error() error
 		FactoryInfo
 	}
 

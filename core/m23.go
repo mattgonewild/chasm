@@ -11,7 +11,7 @@ import (
 type Manager23 struct {
 	Lineage   kit.CoarseMap[uuid.UUID, Lineage]
 	newDaemon [domainCount]newDaemonFunc
-	_         [16]byte
+	_         [48]byte
 	factory   struct {
 		symbol   kit.CoarseMap[uuid.UUID, SymbolFactory]
 		_        [32]byte
@@ -27,12 +27,14 @@ type Manager23 struct {
 		_        [32]byte
 	}
 	registry brokerageDataLogRegistry
-	chasm    kit.CoarseSortedSet23[container]
-	counter  atomic.Uint64
-	onAdd    func(DaemonInfo)
-	onKill   func(DaemonInfo)
-	_        [48]byte
-	buf      [8192]DaemonInfo
+	// welcome to hell
+	counter atomic.Uint64
+	onAdd   func(DaemonInfo)
+	onKill  func(DaemonInfo)
+	alive   atomic.Int64
+	chasm   kit.CoarseSortedSet23[container]
+	_       [48]byte
+	buf     [8192]DaemonInfo
 }
 
 func newManager23(cfg Config) *Manager23 {
@@ -64,6 +66,8 @@ func InitManager23(manager *Manager23, cfg Config) {
 	manager.onKill = cfg.OnKill
 }
 
+func (this *Manager23) Alive() int64 { return this.alive.Load() }
+
 func (this *Manager23) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
@@ -85,6 +89,7 @@ func (this *Manager23) AddSymbol(factory SymbolFactory) error {
 	this.factory.symbol.Set(id, factory)
 	this.Lineage.Set(id, newLineage(symbol, &container))
 	err = daemon.Run()
+	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
 }
@@ -110,6 +115,7 @@ func (this *Manager23) AddBook(factory BookFactory) error {
 	this.factory.book.Set(id, factory)
 	this.Lineage.Set(id, newLineage(book, &container))
 	err = daemon.Run()
+	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
 }
@@ -135,6 +141,7 @@ func (this *Manager23) AddCandle(factory CandleFactory) error {
 	this.factory.candle.Set(id, factory)
 	this.Lineage.Set(id, newLineage(candle, &container))
 	err = daemon.Run()
+	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
 }
@@ -160,6 +167,7 @@ func (this *Manager23) AddTrade(factory TradeFactory) error {
 	this.factory.trade.Set(id, factory)
 	this.Lineage.Set(id, newLineage(trade, &container))
 	err = daemon.Run()
+	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
 }
@@ -185,6 +193,7 @@ func (this *Manager23) AddSchedule(factory ScheduleFactory) error {
 	this.factory.schedule.Set(id, factory)
 	this.Lineage.Set(id, newLineage(schedule, &container))
 	err = daemon.Run()
+	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
 }
@@ -210,6 +219,7 @@ func (this *Manager23) AddData(factory DataFactory) error {
 	this.factory.data.Set(id, factory)
 	this.Lineage.Set(id, newLineage(data, &container))
 	err = daemon.Run()
+	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
 }
@@ -236,6 +246,7 @@ func (this *Manager23) Revive(id uuid.UUID) error {
 
 	this.Lineage.Set(id, reviveLineage(lineage, &container))
 	err = daemon.Run()
+	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
 }
@@ -345,6 +356,19 @@ func (this *Manager23) Pause(hidden bool, selector Selector) (err error) {
 	return err
 }
 
+func (this *Manager23) PauseID(id uuid.UUID) error {
+	lineage, err := this.Lineage.Get(id)
+	if err != nil {
+		return err
+	}
+
+	if !lineage.alive {
+		return ErrInvalid
+	}
+
+	return lineage.ptr.Pause()
+}
+
 func (this *Manager23) Resume(hidden bool, selector Selector) (err error) {
 	noOp := true
 
@@ -362,6 +386,19 @@ func (this *Manager23) Resume(hidden bool, selector Selector) (err error) {
 	}
 
 	return err
+}
+
+func (this *Manager23) ResumeID(id uuid.UUID) error {
+	lineage, err := this.Lineage.Get(id)
+	if err != nil {
+		return err
+	}
+
+	if !lineage.alive {
+		return ErrInvalid
+	}
+
+	return lineage.ptr.Resume()
 }
 
 func (this *Manager23) Restart(hidden bool, selector Selector) (err error) {
@@ -453,6 +490,7 @@ func (this *Manager23) Kill(id uuid.UUID) error {
 
 	this.Lineage.Set(id, endLineage(lineage))
 	err = this.chasm.Delete(container)
+	this.alive.Add(-1)
 	this.onKill(container)
 	return err
 }

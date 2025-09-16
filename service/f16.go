@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"sync/atomic"
 
 	"github.com/mattgonewild/chasm/core"
 	"github.com/mattgonewild/chasm/proto"
@@ -10,10 +9,10 @@ import (
 
 type forgeCore16 struct {
 	manager  core.Manager16
-	counter  atomic.Int64
 	daecount proto.DaeCount
-	_        [8]byte
+	_        [16]byte
 	selector selector
+	_        [32]byte
 	scratch  proto.RepDaeInfo
 	ptr      [8192]*proto.DaeInfo
 	buf      [8192]proto.DaeInfo
@@ -56,7 +55,6 @@ func (this forge16) AddSymbol(_ context.Context, in *proto.BinInfo) (*proto.Nil,
 		return protoNil, err
 	}
 
-	core.counter.Add(1)
 	return protoNil, nil
 }
 
@@ -71,7 +69,6 @@ func (this forge16) AddBook(_ context.Context, in *proto.BinInfo) (*proto.Nil, e
 		return protoNil, err
 	}
 
-	core.counter.Add(1)
 	return protoNil, nil
 }
 
@@ -86,7 +83,6 @@ func (this forge16) AddCandle(_ context.Context, in *proto.BinInfo) (*proto.Nil,
 		return protoNil, err
 	}
 
-	core.counter.Add(1)
 	return protoNil, nil
 }
 
@@ -101,7 +97,6 @@ func (this forge16) AddTrade(_ context.Context, in *proto.BinInfo) (*proto.Nil, 
 		return protoNil, err
 	}
 
-	core.counter.Add(1)
 	return protoNil, nil
 }
 
@@ -116,7 +111,6 @@ func (this forge16) AddSchedule(_ context.Context, in *proto.BinInfo) (*proto.Ni
 		return protoNil, err
 	}
 
-	core.counter.Add(1)
 	return protoNil, nil
 }
 
@@ -131,13 +125,12 @@ func (this forge16) AddData(_ context.Context, in *proto.BinInfo) (*proto.Nil, e
 		return protoNil, err
 	}
 
-	core.counter.Add(1)
 	return protoNil, nil
 }
 
 func (this forge16) Alive(_ context.Context, _ *proto.Nil) (*proto.DaeCount, error) {
 	core := this.core
-	core.daecount.Total = core.counter.Load()
+	core.daecount.Total = core.manager.Alive()
 	return &core.daecount, nil
 }
 
@@ -172,7 +165,6 @@ func (this forge16) Revive(_ context.Context, in *proto.ID) (*proto.Nil, error) 
 		return protoNil, err
 	}
 
-	core.counter.Add(1)
 	return protoNil, nil
 }
 
@@ -263,7 +255,6 @@ func (this forge16) Kill(_ context.Context, in *proto.ID) (*proto.Nil, error) {
 		return protoNil, err
 	}
 
-	core.counter.Add(-1)
 	return protoNil, nil
 }
 

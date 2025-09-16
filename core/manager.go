@@ -24,6 +24,8 @@ type (
 	}
 
 	Linker interface {
+		Liveness
+		ResumeID(id uuid.UUID) error
 		AddSymbol(SymbolFactory) error
 		AddBook(BookFactory) error
 		AddCandle(CandleFactory) error
@@ -33,7 +35,13 @@ type (
 	}
 
 	Unlinker interface {
+		Liveness
+		PauseID(id uuid.UUID) error
 		Kill(id uuid.UUID) error
+	}
+
+	Liveness interface {
+		Alive() int64
 	}
 )
 
