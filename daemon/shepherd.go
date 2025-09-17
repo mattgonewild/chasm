@@ -1,7 +1,7 @@
 package daemon
 
 import (
-	"errors"
+	"math"
 	"sync"
 
 	"github.com/google/uuid"
@@ -14,62 +14,60 @@ import (
 )
 
 const (
-	Await int8 = iota
-	Init
-	On
-	Off
-	Suspended
-	Fault
-
-	shepIntMax uint8 = 13
+	shepName    string = "TODO"
+	shepVersion string = "TODO"
+	shepIntCap  uint8  = 13
 )
 
 type ShepherdConfig struct {
-	Ignore   map[core.Key]bool
-	Interval [shepIntMax]int16
-	Limit    uint16
-	Source   source.Source
-	Sink     sink.Sink
+	// Ignore is a set of Keys to ignore.
+	// Must not be nil.
+	Ignore map[core.Key]bool
+
+	// Controls what candle producers get spawned. Duplicates are not checked.
+	// Must be within [0, 2047].
+	Interval [shepIntCap]int16
+
+	// The maximum number of Daemons to permit.
+	// Must be within [1, 65535].
+	Limit uint16
+
+	// Where to read data from and where to write it to.
+	// Must not be nil.
+	Source source.Source
+	Sink   sink.Sink
 }
 
 type shepherdFactory struct {
 	ignore   map[core.Key]bool
 	id       uuid.UUID
-	interval [shepIntMax]int16
+	interval [shepIntCap]int16
 	limit    uint16
 	iLen     uint8
 	source   source.Source
 	sink     sink.Sink
+	config   []byte
 }
-
-var (
-	ErrNilSource   = errors.New("matt::chasm::daemon: nil source")
-	ErrNilSink     = errors.New("matt::chasm::daemon: nil sink")
-	ErrNilIgnore   = errors.New("matt::chasm::daemon: nil ignore")
-	ErrNilInterval = errors.New("matt::chasm::daemon: nil interval")
-	ErrBadLimit    = errors.New("matt::chasm::daemon: bad limit")
-	ErrBadInterval = errors.New("matt::chasm::daemon: bad interval")
-)
 
 func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
 	if cfg.Source == nil {
-		return nil, ErrNilSource
+		return nil, errNilSource
 	}
 
 	if cfg.Sink == nil {
-		return nil, ErrNilSink
+		return nil, errNilSink
 	}
 
 	if cfg.Ignore == nil {
-		return nil, ErrNilIgnore
+		return nil, errNilIgnore
 	}
 
 	if cfg.Limit < 1 {
-		return nil, ErrBadLimit
+		return nil, errBadLimit
 	}
 
 	var (
-		buf [shepIntMax]int16
+		buf [shepIntCap]int16
 		n   int
 	)
 
@@ -78,13 +76,27 @@ func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
 			continue
 		}
 
-		if core.OkInterval(int64(value)) {
+		if okInterval(int64(value)) {
 			buf[n] = value
 			n++
 			continue
 		}
 
-		return nil, ErrBadInterval
+		return nil, errBadInterval
+	}
+
+	var (
+		buf32 = make([]int32, n)
+		proto = &proto.ShepherdConfig{Limit: uint32(cfg.Limit), Ignore: cfg.Ignore, Interval: buf32}
+	)
+
+	for index := range buf32 {
+		buf32[index] = int32(buf[index])
+	}
+
+	config, err := protobuf.Marshal(proto)
+	if err != nil {
+		return nil, err
 	}
 
 	return &shepherdFactory{
@@ -95,10 +107,27 @@ func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
 		iLen:     uint8(n),
 		source:   cfg.Source,
 		sink:     cfg.Sink,
+		config:   config,
 	}, nil
 }
 
-func (this *shepherdFactory) New() core.SymbolDaemon
+var _ [reportLen - (len(shepName) + 1 + len(shepVersion) + 1 + awaitLen + errNoneLen)]byte
+
+func (this *shepherdFactory) New() core.SymbolDaemon {
+	return &shepherd{
+		since:    kit.UnixNano(),
+		ignore:   this.ignore,
+		id:       this.id,
+		interval: this.interval,
+		limit:    this.limit,
+		code:     Await,
+		iLen:     this.iLen,
+		source:   this.source,
+		sink:     this.sink,
+		config:   this.config,
+		report:   newReport(shepName, shepVersion, Await, errNone),
+	}
+}
 
 func (this *shepherdFactory) ID() uuid.UUID { return this.id }
 
@@ -106,9 +135,9 @@ type shepherd struct {
 	since    int64
 	ignore   map[core.Key]bool
 	id       uuid.UUID
-	interval [shepIntMax]int16
+	interval [shepIntCap]int16
 	limit    uint16
-	code     int8
+	code     stateCode
 	iLen     uint8
 
 	source   source.Source
@@ -120,7 +149,7 @@ type shepherd struct {
 	unlinker core.Unlinker
 	mu       sync.Mutex
 	_        [16]byte
-	report   [64]byte
+	report   report
 }
 
 func (this *shepherd) SetConfig(config []byte) error {
@@ -130,23 +159,23 @@ func (this *shepherd) SetConfig(config []byte) error {
 	}
 
 	if cfg.Ignore == nil {
-		return ErrNilIgnore
+		return errNilIgnore
 	}
 
-	if cfg.Limit < 1 {
-		return ErrBadLimit
+	if cfg.Limit < 1 || cfg.Limit > math.MaxUint16 {
+		return errBadLimit
 	}
 
 	if cfg.Interval == nil {
-		return ErrNilInterval
+		return errNilInterval
 	}
 
-	if len(cfg.Interval) > int(shepIntMax) {
-		return ErrBadInterval
+	if len(cfg.Interval) > int(shepIntCap) {
+		return errOverIntervalCap
 	}
 
 	var (
-		buf [shepIntMax]int16
+		buf [shepIntCap]int16
 		n   int
 	)
 
@@ -155,13 +184,13 @@ func (this *shepherd) SetConfig(config []byte) error {
 			continue
 		}
 
-		if core.OkInterval(int64(value)) {
+		if okInterval(int64(value)) {
 			buf[n] = int16(value)
 			n++
 			continue
 		}
 
-		return ErrBadInterval
+		return errBadInterval
 	}
 
 	this.mu.Lock()
@@ -200,10 +229,13 @@ func (this *shepherd) Status() (int, int64) { return int(this.code), this.since 
 func (this *shepherd) Report() []byte       { return this.report[:] }
 func (this *shepherd) ID() uuid.UUID        { return this.id }
 
+var _ [reportLen - (len(shepName) + 1 + len(shepVersion) + 1 + initLen + errNoneLen)]byte
+
 func (this *shepherd) Initialize(registry core.SymbolLogRegistry) error {
 	this.since = kit.UnixNano()
 	this.code = Init
 	this.registry = registry
+	this.report = newReport(shepName, shepVersion, Init, errNone)
 	return nil
 }
 
@@ -216,3 +248,5 @@ func (this *shepherd) WithUnlinker(unlinker core.Unlinker) core.SymbolDaemon {
 	this.unlinker = unlinker
 	return this
 }
+
+func okInterval(minute int64) bool { return core.OkIntervalMinute(minute) }
