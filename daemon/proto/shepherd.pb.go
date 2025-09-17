@@ -22,10 +22,16 @@ const (
 )
 
 type ShepherdConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         uint32                 `protobuf:"fixed32,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	Ignore        map[uint64]bool        `protobuf:"bytes,2,rep,name=ignore,proto3" json:"ignore,omitempty" protobuf_key:"fixed64,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	Interval      []int32                `protobuf:"fixed32,3,rep,packed,name=interval,proto3" json:"interval,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of Daemons to permit.
+	// Must be within [1, 65535].
+	Limit uint32 `protobuf:"fixed32,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Ignore is a set of Keys to ignore.
+	// Must not be nil.
+	Ignore map[uint64]bool `protobuf:"bytes,2,rep,name=ignore,proto3" json:"ignore,omitempty" protobuf_key:"fixed64,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	// Controls what candle producers get spawned. Duplicates are not checked.
+	// Must be within [0, 2047].
+	Interval      []int32 `protobuf:"fixed32,3,rep,packed,name=interval,proto3" json:"interval,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
