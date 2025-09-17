@@ -129,11 +129,22 @@ func DecodeCandleKey(key Key) (string, time.Duration) {
 
 // OkInterval validates that a duration given in nanoseconds is acceptable for use in a Key.
 // It must be a positive multiple of one minute (not zero) and no greater than 2047 minutes.
-func OkInterval(interval int64) bool {
+func OkInterval(duration int64) bool {
 	const (
 		step = int64(intStep)
 		max  = int64(intMask) * step
 	)
 
-	return (interval >= step) && (interval <= max) && (interval%step == 0)
+	return (duration >= step) && (duration <= max) && (duration%step == 0)
+}
+
+// OkIntervalMinute validates that a duration given in minutes is acceptable for use in a Key.
+// It must be greater than zero and less than 2048.
+func OkIntervalMinute(minute int64) bool {
+	const (
+		min int64 = 1
+		max int64 = int64(intMask)
+	)
+
+	return (minute >= min) && (minute <= max)
 }
