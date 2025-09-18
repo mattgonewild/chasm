@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/mattgonewild/chasm/core"
-	"github.com/mattgonewild/chasm/proto"
+	"github.com/mattgonewild/chasm/service/proto"
 )
 
 type forgeCore22 struct {

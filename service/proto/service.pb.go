@@ -543,7 +543,7 @@ const file_service_proto_rawDesc = "" +
 	".proto.Nil\x12\"\n" +
 	"\bShutdown\x12\n" +
 	".proto.Nil\x1a\n" +
-	".proto.NilB+Z)github.com/mattgonewild/chasm/proto;protob\x06proto3"
+	".proto.NilB3Z1github.com/mattgonewild/chasm/service/proto;protob\x06proto3"
 
 var (
 	file_service_proto_rawDescOnce sync.Once
