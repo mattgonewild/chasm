@@ -1,8 +1,10 @@
 package daemon
 
 import (
+	"encoding/binary"
 	"math"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/mattgonewild/chasm/core"
@@ -130,6 +132,14 @@ func (this *shepherdFactory) New() core.SymbolDaemon {
 
 func (this *shepherdFactory) ID() uuid.UUID { return this.id }
 
+type pendingShepUpdate struct {
+	ignore   map[core.Key]bool
+	interval [shepIntCap]int16
+	limit    uint16
+	iLen     uint8
+	config   []byte
+}
+
 type shepherd struct {
 	since    int64
 	ignore   map[core.Key]bool
@@ -144,11 +154,11 @@ type shepherd struct {
 	registry core.SymbolLogRegistry
 	linker   core.Linker
 
-	config   []byte
+	config   []byte // TODO: ...
 	unlinker core.Unlinker
 	mu       sync.Mutex
 	ctrl     chan pack
-	_        [8]byte
+	pending  *pendingShepUpdate // TODO: nil
 	report   report
 }
 
@@ -194,13 +204,16 @@ func (this *shepherd) SetConfig(config []byte) error {
 	}
 
 	this.mu.Lock()
-	this.ignore = cfg.Ignore
-	this.interval = buf
-	this.limit = uint16(cfg.Limit)
-	this.iLen = uint8(n)
-	this.config = config
+	this.pending = &pendingShepUpdate{
+		ignore:   cfg.Ignore,
+		interval: buf,
+		limit:    uint16(cfg.Limit),
+		iLen:     uint8(n),
+		config:   config,
+	}
 	this.mu.Unlock()
-	return nil
+
+	return send(this.ctrl, update)
 }
 
 func (this *shepherd) Run() error { return this.tryBoot() }
@@ -219,7 +232,8 @@ func (this *shepherd) tryBoot() error {
 	return errInvalid
 }
 
-func (this *shepherd) microKernel() {
+func (this *shepherd) microKernel() { // TODO: ...
+	writer := this.sink.Symbol(core.Key(math.MaxUint8))
 start:
 	reader := this.source.Symbol(core.Key(math.MaxUint8))
 	if err := reader.Open(); err != nil {
@@ -245,12 +259,37 @@ active:
 			case restart:
 				this.awkOkTransitionTo(pack, reader, Booting)
 				goto start
+			case update:
+				this.awkOkTransitionTo(pack, nil, Updating)
+				this.updateConfig()
+				goto active
 			default:
 				this.awkErr(pack, errUnknown)
 				continue
 			}
 		default:
-			// do work
+			if err := reader.Next(); err != nil {
+				this.reportFault(errNext, err)
+				return
+			}
+
+			var (
+				event = reader.Read()
+				key   = core.EncodeSymbolKey(event.Symbol)
+			)
+
+			if event.Online {
+				this.handleOnline(key)
+			} else {
+				this.handleOffline(key)
+			}
+
+			if err := writer.Write(event); err != nil {
+				reader.Close()
+				this.reportFault(errWrite, err)
+				return
+			}
+
 			continue
 		}
 	}
@@ -271,18 +310,91 @@ sleep:
 	case restart:
 		this.awkOkTransitionTo(pack, reader, Booting)
 		goto start
+	case update:
+		this.awkOkTransitionTo(pack, nil, Updating)
+		this.updateConfig()
+		goto sleep
 	default:
 		this.awkErr(pack, errUnknown)
 		goto sleep
 	}
 }
 
+func (this *shepherd) handleOnline(key core.Key)  { this.forEach(key, this.resumeOrSpawn) }
+func (this *shepherd) handleOffline(key core.Key) { this.forEach(key, this.unlinker.PauseID) }
+
+func (this *shepherd) forEach(key core.Key, yield func(uuid.UUID) error) {
+	this.mu.Lock()
+	if this.ignore[key] {
+		this.mu.Unlock()
+		return
+	}
+
+	yield(this.spawnID(core.Book, key))
+	yield(this.spawnID(core.Trade, key))
+
+	var (
+		interval = this.interval
+		iLen     = this.iLen
+	)
+
+	for range interval[:iLen] {
+		yield(this.spawnID(core.Candle, key)) // TODO: we have to pack the interval in here
+	}
+
+	this.mu.Unlock()
+}
+
+func (this *shepherd) spawnID(domain core.Domain, key core.Key) uuid.UUID {
+	msb := binary.LittleEndian.Uint64(this.id[:8])
+	msb &= ^uint64(0xFFFF)
+	msb |= uint64(0x8) << 12
+	msb |= uint64(domain)
+
+	lsb := uint64(key)
+	lsb |= uint64(2) << 62
+
+	id := uuid.Nil
+	binary.BigEndian.PutUint64(id[:8], msb)
+	binary.BigEndian.PutUint64(id[8:], lsb)
+	return id
+}
+
+func (this *shepherd) updateConfig()
+
+func (this *shepherd) resumeOrSpawn(id uuid.UUID) error {
+	if this.linker.ResumeID(id) == nil {
+		return nil
+	}
+
+	switch core.Domain(binary.BigEndian.Uint64(id[:8]) & 0x0FFF) {
+	case core.Book:
+		return this.linker.AddBook(this.newBookFactory(id))
+	case core.Candle:
+		key := core.Key(binary.BigEndian.Uint64(id[8:]) &^ (3 << 62))
+		_, interval := core.DecodeCandleKey(key)
+		return this.linker.AddCandle(this.newCandleFactory(id, interval))
+	case core.Trade:
+		return this.linker.AddTrade(this.newTradeFactory(id))
+	default:
+		return errInvalid
+	}
+}
+
+func (this *shepherd) newBookFactory(id uuid.UUID) core.BookFactory
+func (this *shepherd) newCandleFactory(id uuid.UUID, interval time.Duration) core.CandleFactory
+func (this *shepherd) newTradeFactory(id uuid.UUID) core.TradeFactory
+
 func (this *shepherd) awkOk(cmd pack)             { kit.Close(cmd.awk) }
 func (this *shepherd) awkErr(cmd pack, err error) { cmd.awk <- err; kit.Close(cmd.awk) }
 
 func (this *shepherd) awkOkTransitionTo(cmd pack, reader source.Reader[core.SymbolEvent], code stateCode) {
 	kit.Close(cmd.awk)
-	reader.Close()
+
+	if reader != nil {
+		reader.Close()
+	}
+
 	this.reportState(code)
 }
 
