@@ -61,6 +61,7 @@ const (
 	Await stateCode = iota
 	Init
 	Booting
+	Updating
 	On
 	Off
 	Suspended
@@ -75,6 +76,8 @@ func (this stateCode) String() string {
 		return _initialized
 	case Booting:
 		return _booting
+	case Updating:
+		return _updating
 	case On:
 		return _on
 	case Off:
@@ -177,6 +180,7 @@ const (
 	_awaiting    string = "awaiting"
 	_initialized string = "initialized"
 	_booting     string = "booting"
+	_updating    string = "updating"
 	_on          string = "on"
 	_off         string = "off"
 	_suspended   string = "suspended"

@@ -9,6 +9,7 @@ const (
 	pause
 	resume
 	restart
+	update
 )
 
 type pack struct {
