@@ -117,25 +117,25 @@ func NewManager32(cfg Config) Manager { return newManager32(cfg) }
 func NewManager33(cfg Config) Manager { return newManager33(cfg) }
 func NewManager34(cfg Config) Manager { return newManager34(cfg) }
 
-type domain uint8
+type Domain uint8
 
 const (
-	symbol domain = iota
-	book
-	candle
-	trade
-	schedule
-	data
+	Symbol Domain = iota
+	Book
+	Candle
+	Trade
+	Schedule
+	Data
 	domainCount
 )
 
 type Lineage struct {
 	alive  bool
-	domain domain
+	domain Domain
 	ptr    *container
 }
 
-func newLineage(domain domain, ptr *container) Lineage {
+func newLineage(domain Domain, ptr *container) Lineage {
 	return Lineage{alive: true, domain: domain, ptr: ptr}
 }
 

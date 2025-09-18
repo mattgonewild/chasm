@@ -45,12 +45,12 @@ func newManager24(cfg Config) *Manager24 {
 
 func InitManager24(manager *Manager24, cfg Config) {
 	kit.InitCoarseMap(&manager.Lineage, cfg.Lineage)
-	manager.newDaemon[symbol] = manager.newSymbolDaemon
-	manager.newDaemon[book] = manager.newBookDaemon
-	manager.newDaemon[candle] = manager.newCandleDaemon
-	manager.newDaemon[trade] = manager.newTradeDaemon
-	manager.newDaemon[schedule] = manager.newScheduleDaemon
-	manager.newDaemon[data] = manager.newDataDaemon
+	manager.newDaemon[Symbol] = manager.newSymbolDaemon
+	manager.newDaemon[Book] = manager.newBookDaemon
+	manager.newDaemon[Candle] = manager.newCandleDaemon
+	manager.newDaemon[Trade] = manager.newTradeDaemon
+	manager.newDaemon[Schedule] = manager.newScheduleDaemon
+	manager.newDaemon[Data] = manager.newDataDaemon
 	kit.InitCoarseMap(&manager.factory.symbol, cfg.Factory.Symbol)
 	kit.InitCoarseMap(&manager.factory.book, cfg.Factory.Book)
 	kit.InitCoarseMap(&manager.factory.candle, cfg.Factory.Candle)
@@ -87,7 +87,7 @@ func (this *Manager24) AddSymbol(factory SymbolFactory) error {
 	}
 
 	this.factory.symbol.Set(id, factory)
-	this.Lineage.Set(id, newLineage(symbol, &container))
+	this.Lineage.Set(id, newLineage(Symbol, &container))
 	err = daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
@@ -113,7 +113,7 @@ func (this *Manager24) AddBook(factory BookFactory) error {
 	}
 
 	this.factory.book.Set(id, factory)
-	this.Lineage.Set(id, newLineage(book, &container))
+	this.Lineage.Set(id, newLineage(Book, &container))
 	err = daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
@@ -139,7 +139,7 @@ func (this *Manager24) AddCandle(factory CandleFactory) error {
 	}
 
 	this.factory.candle.Set(id, factory)
-	this.Lineage.Set(id, newLineage(candle, &container))
+	this.Lineage.Set(id, newLineage(Candle, &container))
 	err = daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
@@ -165,7 +165,7 @@ func (this *Manager24) AddTrade(factory TradeFactory) error {
 	}
 
 	this.factory.trade.Set(id, factory)
-	this.Lineage.Set(id, newLineage(trade, &container))
+	this.Lineage.Set(id, newLineage(Trade, &container))
 	err = daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
@@ -191,7 +191,7 @@ func (this *Manager24) AddSchedule(factory ScheduleFactory) error {
 	}
 
 	this.factory.schedule.Set(id, factory)
-	this.Lineage.Set(id, newLineage(schedule, &container))
+	this.Lineage.Set(id, newLineage(Schedule, &container))
 	err = daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
@@ -217,7 +217,7 @@ func (this *Manager24) AddData(factory DataFactory) error {
 	}
 
 	this.factory.data.Set(id, factory)
-	this.Lineage.Set(id, newLineage(data, &container))
+	this.Lineage.Set(id, newLineage(Data, &container))
 	err = daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
