@@ -51,19 +51,19 @@ type shepherdFactory struct {
 
 func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
 	if cfg.Source == nil {
-		return nil, errNilSource
+		return nil, errNil
 	}
 
 	if cfg.Sink == nil {
-		return nil, errNilSink
+		return nil, errNil
 	}
 
 	if cfg.Ignore == nil {
-		return nil, errNilIgnore
+		return nil, errNil
 	}
 
 	if cfg.Limit < 1 {
-		return nil, errBadLimit
+		return nil, errInvalid
 	}
 
 	var (
@@ -82,7 +82,7 @@ func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
 			continue
 		}
 
-		return nil, errBadInterval
+		return nil, errInvalid
 	}
 
 	var (
@@ -159,19 +159,19 @@ func (this *shepherd) SetConfig(config []byte) error {
 	}
 
 	if cfg.Ignore == nil {
-		return errNilIgnore
+		return errNil
 	}
 
 	if cfg.Limit < 1 || cfg.Limit > math.MaxUint16 {
-		return errBadLimit
+		return errInvalid
 	}
 
 	if cfg.Interval == nil {
-		return errNilInterval
+		return errNil
 	}
 
 	if len(cfg.Interval) > int(shepIntCap) {
-		return errOverIntervalCap
+		return errInvalid
 	}
 
 	var (
@@ -190,7 +190,7 @@ func (this *shepherd) SetConfig(config []byte) error {
 			continue
 		}
 
-		return errBadInterval
+		return errInvalid
 	}
 
 	this.mu.Lock()

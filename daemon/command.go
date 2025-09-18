@@ -28,6 +28,6 @@ func send(ch chan<- pack, cmd command) error {
 		deadline.Stop()
 		return <-awk
 	case <-deadline.C:
-		return errDeadlineExceeded
+		return errDeadline
 	}
 }

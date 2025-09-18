@@ -1,5 +1,7 @@
 package daemon
 
+import "fmt"
+
 const (
 	reportLen int  = 64
 	lineEnd   byte = '\n'
@@ -56,200 +58,108 @@ func newFaultReport(name, version string, code errorCode, upstream error) (repor
 type stateCode int8
 
 const (
-	None stateCode = iota
-	Unknown
-	Await
+	Await stateCode = iota
 	Init
 	Booting
 	On
 	Off
 	Suspended
 	Fault
-
-	noneLen      int = len(none) + 1
-	unknownLen   int = len(unknown) + 1
-	awaitLen     int = len(awaiting) + 1
-	initLen      int = len(initialized) + 1
-	bootingLen   int = len(booting) + 1
-	onLen        int = len(on) + 1
-	offLen       int = len(off) + 1
-	suspendedLen int = len(suspended) + 1
-	faultLen     int = len(fault) + 1
-
-	none        string = "none"
-	unknown     string = "unknown"
-	awaiting    string = "awaiting"
-	initialized string = "initialized"
-	booting     string = "booting"
-	on          string = "on"
-	off         string = "off"
-	suspended   string = "suspended"
-	fault       string = "fault"
 )
 
 func (this stateCode) String() string {
 	switch this {
-	case None:
-		return none
-	case Unknown:
-		return unknown
 	case Await:
-		return awaiting
+		return _awaiting
 	case Init:
-		return initialized
+		return _initialized
 	case Booting:
-		return booting
+		return _booting
 	case On:
-		return on
+		return _on
 	case Off:
-		return off
+		return _off
 	case Suspended:
-		return suspended
+		return _suspended
 	case Fault:
-		return fault
+		return _fault
 	default:
-		return unknown
+		return _default
 	}
 }
+
+func (this stateCode) lLen() int { return lineLength(this) }
 
 type errorCode int8
 
 const (
 	errUnknown errorCode = iota
-	errNilSource
-	errNilSink
-	errNilIgnore
-	errNilInterval
-	errBadLimit
-	errBadInterval
-	errOverIntervalCap
+	errNil
 	errInvalid
 	errOpen
 	errNext
 	errClose
 	errWrite
 	errFlush
-	errDeadlineExceeded
-
-	unknownError     string = "unknown error"
-	nilSource        string = "nil source"
-	nilSink          string = "nil sink"
-	nilIgnore        string = "nil ignore"
-	nilInterval      string = "nil interval"
-	badLimit         string = "bad limit"
-	badInterval      string = "bad interval"
-	overIntervalCap  string = "over interval cap"
-	invalid          string = "invalid"
-	open             string = "open"
-	next             string = "next"
-	close            string = "close"
-	write            string = "write"
-	flush            string = "flush"
-	deadlineExceeded string = "deadline exceeded"
-
-	prefix                   string = "matt::chasm::daemon: "
-	prefixedUnknownError     string = prefix + unknownError
-	prefixedNilSource        string = prefix + nilSource
-	prefixedNilSink          string = prefix + nilSink
-	prefixedNilIgnore        string = prefix + nilIgnore
-	prefixedNilInterval      string = prefix + nilInterval
-	prefixedBadLimit         string = prefix + badLimit
-	prefixedBadInterval      string = prefix + badInterval
-	prefixedOverIntervalCap  string = prefix + overIntervalCap
-	prefixedInvalid          string = prefix + invalid
-	prefixedOpen             string = prefix + open
-	prefixedNext             string = prefix + next
-	prefixedClose            string = prefix + close
-	prefixedWrite            string = prefix + write
-	prefixedFlush            string = prefix + flush
-	prefixedDeadlineExceeded string = prefix + deadlineExceeded
+	errDeadline
 )
 
 func (this errorCode) String() string { return mapError(this, false) }
 func (this errorCode) Error() string  { return mapError(this, true) }
+func (this errorCode) lLen() int      { return lineLength(this) }
 
 func mapError(code errorCode, prefixed bool) string {
 	switch code {
 	case errUnknown:
 		if prefixed {
-			return prefixedUnknownError
+			return _prefixedUnknown
 		}
-		return unknownError
-	case errNilSource:
+		return _unknown
+	case errNil:
 		if prefixed {
-			return prefixedNilSource
+			return _prefixedNil
 		}
-		return nilSource
-	case errNilSink:
-		if prefixed {
-			return prefixedNilSink
-		}
-		return nilSink
-	case errNilIgnore:
-		if prefixed {
-			return prefixedNilIgnore
-		}
-		return nilIgnore
-	case errNilInterval:
-		if prefixed {
-			return prefixedNilInterval
-		}
-		return nilInterval
-	case errBadLimit:
-		if prefixed {
-			return prefixedBadLimit
-		}
-		return badLimit
-	case errBadInterval:
-		if prefixed {
-			return prefixedBadInterval
-		}
-		return badInterval
-	case errOverIntervalCap:
-		if prefixed {
-			return prefixedOverIntervalCap
-		}
-		return overIntervalCap
+		return _nil
 	case errInvalid:
 		if prefixed {
-			return prefixedInvalid
+			return _prefixedInvalid
 		}
-		return invalid
+		return _invalid
 	case errOpen:
 		if prefixed {
-			return prefixedOpen
+			return _prefixedOpen
 		}
-		return open
+		return _open
 	case errNext:
 		if prefixed {
-			return prefixedNext
+			return _prefixedNext
 		}
-		return next
+		return _next
 	case errClose:
 		if prefixed {
-			return prefixedClose
+			return _prefixedClose
 		}
-		return close
+		return _close
 	case errWrite:
 		if prefixed {
-			return prefixedWrite
+			return _prefixedWrite
 		}
-		return write
+		return _write
 	case errFlush:
 		if prefixed {
-			return prefixedFlush
+			return _prefixedFlush
 		}
-		return flush
-	case errDeadlineExceeded:
+		return _flush
+	case errDeadline:
 		if prefixed {
-			return prefixedDeadlineExceeded
+			return _prefixedDeadline
 		}
-		return deadlineExceeded
+		return _deadline
 	default:
 		if prefixed {
-			return prefixedUnknownError
+			return _prefixedDefault
 		}
-		return unknownError
+		return _default
 	}
 }
 
@@ -260,3 +170,39 @@ func (this errorCode) Is(target error) bool {
 
 	return false
 }
+
+const (
+	_unknown     string = "unknown"
+	_nil         string = "nil"
+	_awaiting    string = "awaiting"
+	_initialized string = "initialized"
+	_booting     string = "booting"
+	_on          string = "on"
+	_off         string = "off"
+	_suspended   string = "suspended"
+	_fault       string = "fault"
+	_invalid     string = "invalid"
+	_open        string = "open"
+	_next        string = "next"
+	_close       string = "close"
+	_write       string = "write"
+	_flush       string = "flush"
+	_deadline    string = "deadline"
+	_default     string = "default"
+)
+
+const (
+	_prefix           string = "matt::chasm::daemon: "
+	_prefixedUnknown  string = _prefix + _unknown
+	_prefixedNil      string = _prefix + _nil
+	_prefixedInvalid  string = _prefix + _invalid
+	_prefixedOpen     string = _prefix + _open
+	_prefixedNext     string = _prefix + _next
+	_prefixedClose    string = _prefix + _close
+	_prefixedWrite    string = _prefix + _write
+	_prefixedFlush    string = _prefix + _flush
+	_prefixedDeadline string = _prefix + _deadline
+	_prefixedDefault  string = _prefix + _default
+)
+
+func lineLength(stringer fmt.Stringer) int { return len(stringer.String()) + 1 }
