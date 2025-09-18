@@ -11,15 +11,23 @@ const (
 	restart
 )
 
-func send(ch chan<- command, cmd command) error {
-	deadline := time.NewTimer(time.Second * 3)
+type pack struct {
+	cmd command
+	awk chan<- error
+}
+
+func send(ch chan<- pack, cmd command) error {
+	var (
+		awk      = make(chan error)
+		pack     = pack{cmd: cmd, awk: awk}
+		deadline = time.NewTimer(time.Second * 3)
+	)
 
 	select {
-	case ch <- cmd:
+	case ch <- pack:
 		deadline.Stop()
-		return nil
+		return <-awk
 	case <-deadline.C:
-		deadline.Stop()
 		return errDeadlineExceeded
 	}
 }

@@ -60,6 +60,7 @@ const (
 	Unknown
 	Await
 	Init
+	Booting
 	On
 	Off
 	Suspended
@@ -69,6 +70,7 @@ const (
 	unknownLen   int = len(unknown) + 1
 	awaitLen     int = len(awaiting) + 1
 	initLen      int = len(initialized) + 1
+	bootingLen   int = len(booting) + 1
 	onLen        int = len(on) + 1
 	offLen       int = len(off) + 1
 	suspendedLen int = len(suspended) + 1
@@ -78,6 +80,7 @@ const (
 	unknown     string = "unknown"
 	awaiting    string = "awaiting"
 	initialized string = "initialized"
+	booting     string = "booting"
 	on          string = "on"
 	off         string = "off"
 	suspended   string = "suspended"
@@ -94,6 +97,8 @@ func (this stateCode) String() string {
 		return awaiting
 	case Init:
 		return initialized
+	case Booting:
+		return booting
 	case On:
 		return on
 	case Off:

@@ -111,8 +111,6 @@ func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
 	}, nil
 }
 
-var _ [reportLen - (len(shepName) + 1 + len(shepVersion) + 1 + awaitLen + errNoneLen)]byte
-
 func (this *shepherdFactory) New() core.SymbolDaemon {
 	return &shepherd{
 		since:    kit.UnixNano(),
@@ -125,7 +123,8 @@ func (this *shepherdFactory) New() core.SymbolDaemon {
 		source:   this.source,
 		sink:     this.sink,
 		config:   this.config,
-		report:   newReport(shepName, shepVersion, Await, errNone),
+		ctrl:     make(chan pack),
+		report:   newStateReport(shepName, shepVersion, Await),
 	}
 }
 
@@ -148,7 +147,8 @@ type shepherd struct {
 	config   []byte
 	unlinker core.Unlinker
 	mu       sync.Mutex
-	_        [16]byte
+	ctrl     chan pack
+	_        [8]byte
 	report   report
 }
 
@@ -203,39 +203,114 @@ func (this *shepherd) SetConfig(config []byte) error {
 	return nil
 }
 
-func (this *shepherd) Run() error {
-	return nil
+func (this *shepherd) Run() error { return this.tryBoot() }
+
+func (this *shepherd) tryBoot() error {
+	this.mu.Lock()
+	if this.code == Init || this.code == Off {
+		this.reportState(Booting)
+		this.mu.Unlock()
+
+		go this.microKernel()
+		return nil
+	}
+
+	this.mu.Unlock()
+	return errInvalid
 }
 
-func (this *shepherd) Shutdown() error {
-	return nil
+func (this *shepherd) microKernel() {
+start:
+	reader := this.source.Symbol(core.Key(math.MaxUint8))
+	if err := reader.Open(); err != nil {
+		this.reportFault(errOpen, err)
+		return
+	}
+
+active:
+	this.reportState(On)
+	for {
+		select {
+		case pack := <-this.ctrl:
+			switch pack.cmd {
+			case shutdown:
+				this.awkOkTransitionTo(pack, reader, Off)
+				return
+			case pause:
+				this.awkOk(pack)
+				goto sleep
+			case resume:
+				this.awkErr(pack, errInvalid)
+				continue
+			case restart:
+				this.awkOkTransitionTo(pack, reader, Booting)
+				goto start
+			default:
+				this.awkErr(pack, errUnknown)
+				continue
+			}
+		default:
+			// do work
+			continue
+		}
+	}
+
+sleep:
+	this.reportState(Suspended)
+	pack := <-this.ctrl
+	switch pack.cmd {
+	case shutdown:
+		this.awkOkTransitionTo(pack, reader, Off)
+		return
+	case pause:
+		this.awkErr(pack, errInvalid)
+		goto sleep
+	case resume:
+		this.awkOk(pack)
+		goto active
+	case restart:
+		this.awkOkTransitionTo(pack, reader, Booting)
+		goto start
+	default:
+		this.awkErr(pack, errUnknown)
+		goto sleep
+	}
 }
 
-func (this *shepherd) Pause() error {
-	return nil
+func (this *shepherd) awkOk(cmd pack)             { kit.Close(cmd.awk) }
+func (this *shepherd) awkErr(cmd pack, err error) { cmd.awk <- err; kit.Close(cmd.awk) }
+
+func (this *shepherd) awkOkTransitionTo(cmd pack, reader source.Reader[core.SymbolEvent], code stateCode) {
+	kit.Close(cmd.awk)
+	reader.Close()
+	this.reportState(code)
 }
 
-func (this *shepherd) Resume() error {
-	return nil
+func (this *shepherd) reportState(code stateCode) {
+	this.since = kit.UnixNano()
+	this.code = code
+	this.report = newStateReport(shepName, shepVersion, code)
 }
 
-func (this *shepherd) Restart() error {
-	return nil
+func (this *shepherd) reportFault(code errorCode, upstream error) {
+	this.since = kit.UnixNano()
+	this.code = Fault
+	this.report = newFaultReport(shepName, shepVersion, code, upstream)
 }
 
+func (this *shepherd) Shutdown() error      { return send(this.ctrl, shutdown) }
+func (this *shepherd) Pause() error         { return send(this.ctrl, pause) }
+func (this *shepherd) Resume() error        { return send(this.ctrl, resume) }
+func (this *shepherd) Restart() error       { return send(this.ctrl, restart) }
 func (this *shepherd) Tag() string          { return "control" }
 func (this *shepherd) Config() []byte       { return this.config }
 func (this *shepherd) Status() (int, int64) { return int(this.code), this.since }
 func (this *shepherd) Report() []byte       { return this.report[:] }
 func (this *shepherd) ID() uuid.UUID        { return this.id }
 
-var _ [reportLen - (len(shepName) + 1 + len(shepVersion) + 1 + initLen + errNoneLen)]byte
-
 func (this *shepherd) Initialize(registry core.SymbolLogRegistry) error {
-	this.since = kit.UnixNano()
-	this.code = Init
 	this.registry = registry
-	this.report = newReport(shepName, shepVersion, Init, errNone)
+	this.reportState(Init)
 	return nil
 }
 
