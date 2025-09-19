@@ -17,6 +17,7 @@ type (
 		Book(key core.Key) Reader[core.BookEvent]
 		Candle(key core.Key) Reader[core.CandleEvent]
 		Trade(key core.Key) Reader[core.TradeEvent]
+		Supported() []core.Key
 	}
 
 	Reader[T core.Event] interface {
@@ -61,15 +62,20 @@ func NewSource(
 func (this *source) Symbol(key core.Key) Reader[core.SymbolEvent] {
 	return newBufWebSockReader(this.origin, this.symbol, key)
 }
+
 func (this *source) Book(key core.Key) Reader[core.BookEvent] {
 	return newBufWebSockReader(this.origin, this.book, key)
 }
+
 func (this *source) Candle(key core.Key) Reader[core.CandleEvent] {
 	return newBufWebSockReader(this.origin, this.candle, key)
 }
+
 func (this *source) Trade(key core.Key) Reader[core.TradeEvent] {
 	return newBufWebSockReader(this.origin, this.trade, key)
 }
+
+func (this *source) Supported() []core.Key { return make([]core.Key, 0) }
 
 type bufWebSockReader[T core.Event] struct {
 	conn    *tls.Conn
