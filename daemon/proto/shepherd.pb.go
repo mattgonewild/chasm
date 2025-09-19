@@ -23,15 +23,12 @@ const (
 
 type ShepherdConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The maximum number of Daemons to permit.
-	// Must be within [1, 65535].
-	Limit uint32 `protobuf:"fixed32,1,opt,name=limit,proto3" json:"limit,omitempty"`
 	// Ignore is a set of Keys to ignore.
 	// Must not be nil.
-	Ignore map[uint64]bool `protobuf:"bytes,2,rep,name=ignore,proto3" json:"ignore,omitempty" protobuf_key:"fixed64,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	Ignore map[uint64]bool `protobuf:"bytes,1,rep,name=ignore,proto3" json:"ignore,omitempty" protobuf_key:"fixed64,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	// Controls what candle producers get spawned. Duplicates are not checked.
-	// Must be within [0, 2047].
-	Interval      []int32 `protobuf:"fixed32,3,rep,packed,name=interval,proto3" json:"interval,omitempty"`
+	// Must be within [0, 2047] and ascending.
+	Interval      []int32 `protobuf:"fixed32,2,rep,packed,name=interval,proto3" json:"interval,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -66,13 +63,6 @@ func (*ShepherdConfig) Descriptor() ([]byte, []int) {
 	return file_shepherd_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ShepherdConfig) GetLimit() uint32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
 func (x *ShepherdConfig) GetIgnore() map[uint64]bool {
 	if x != nil {
 		return x.Ignore
@@ -91,11 +81,10 @@ var File_shepherd_proto protoreflect.FileDescriptor
 
 const file_shepherd_proto_rawDesc = "" +
 	"\n" +
-	"\x0eshepherd.proto\x12\x05proto\"\xb8\x01\n" +
-	"\x0eShepherdConfig\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\aR\x05limit\x129\n" +
-	"\x06ignore\x18\x02 \x03(\v2!.proto.ShepherdConfig.IgnoreEntryR\x06ignore\x12\x1a\n" +
-	"\binterval\x18\x03 \x03(\x0fR\binterval\x1a9\n" +
+	"\x0eshepherd.proto\x12\x05proto\"\xa2\x01\n" +
+	"\x0eShepherdConfig\x129\n" +
+	"\x06ignore\x18\x01 \x03(\v2!.proto.ShepherdConfig.IgnoreEntryR\x06ignore\x12\x1a\n" +
+	"\binterval\x18\x02 \x03(\x0fR\binterval\x1a9\n" +
 	"\vIgnoreEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x06R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01B2Z0github.com/mattgonewild/chasm/daemon/proto;protob\x06proto3"

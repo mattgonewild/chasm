@@ -5,15 +5,11 @@ package proto;
 option go_package = "github.com/mattgonewild/chasm/daemon/proto;proto";
 
 message ShepherdConfig {
-    // The maximum number of Daemons to permit.
-    // Must be within [1, 65535].
-    fixed32            limit    = 1;
-
     // Ignore is a set of Keys to ignore.
     // Must not be nil.
-    map<fixed64, bool> ignore   = 2;
+    map<fixed64, bool> ignore   = 1;
     
     // Controls what candle producers get spawned. Duplicates are not checked.
-    // Must be within [0, 2047].
-    repeated sfixed32  interval = 3;
+    // Must be within [0, 2047] and ascending.
+    repeated sfixed32  interval = 2;
 }

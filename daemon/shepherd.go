@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"math"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/mattgonewild/chasm/core"
@@ -27,12 +26,8 @@ type ShepherdConfig struct {
 	Ignore map[core.Key]bool
 
 	// Controls what candle producers get spawned. Duplicates are not checked.
-	// Must be within [0, 2047].
+	// Must be within [0, 2047] and ascending.
 	Interval [shepIntCap]int16
-
-	// The maximum number of Daemons to permit.
-	// Must be within [1, 65535].
-	Limit uint16
 
 	// Where to read data from and where to write it to.
 	// Must not be nil.
@@ -44,7 +39,6 @@ type shepherdFactory struct {
 	ignore   map[core.Key]bool
 	id       uuid.UUID
 	interval [shepIntCap]int16
-	limit    uint16
 	iLen     uint8
 	source   source.Source
 	sink     sink.Sink
@@ -52,20 +46,16 @@ type shepherdFactory struct {
 }
 
 func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
+	if cfg.Ignore == nil {
+		return nil, errNil
+	}
+
 	if cfg.Source == nil {
 		return nil, errNil
 	}
 
 	if cfg.Sink == nil {
 		return nil, errNil
-	}
-
-	if cfg.Ignore == nil {
-		return nil, errNil
-	}
-
-	if cfg.Limit < 1 {
-		return nil, errInvalid
 	}
 
 	var (
@@ -89,7 +79,7 @@ func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
 
 	var (
 		buf32 = make([]int32, n)
-		proto = &proto.ShepherdConfig{Limit: uint32(cfg.Limit), Ignore: cfg.Ignore, Interval: buf32}
+		proto = &proto.ShepherdConfig{Ignore: cfg.Ignore, Interval: buf32}
 	)
 
 	for index := range buf32 {
@@ -105,7 +95,6 @@ func NewShepherdFactory(cfg ShepherdConfig) (core.SymbolFactory, error) {
 		ignore:   cfg.Ignore,
 		id:       uuid.New(),
 		interval: buf,
-		limit:    cfg.Limit,
 		iLen:     uint8(n),
 		source:   cfg.Source,
 		sink:     cfg.Sink,
@@ -120,7 +109,6 @@ func (this *shepherdFactory) New() core.SymbolDaemon {
 		ctrl:     make(chan pack),
 		id:       this.id,
 		interval: this.interval,
-		limit:    this.limit,
 		code:     Await,
 		iLen:     this.iLen,
 		source:   this.source,
@@ -128,7 +116,6 @@ func (this *shepherdFactory) New() core.SymbolDaemon {
 		in: shepInCfg{
 			ignore:   this.ignore,
 			interval: this.interval,
-			limit:    this.limit,
 			iLen:     this.iLen,
 			config:   this.config,
 		},
@@ -141,7 +128,7 @@ func (this *shepherdFactory) ID() uuid.UUID { return this.id }
 type shepInCfg struct {
 	ignore   map[core.Key]bool
 	interval [shepIntCap]int16
-	limit    uint16
+	_        [2]byte
 	iLen     uint8
 	config   []byte
 }
@@ -152,7 +139,7 @@ type shepherd struct {
 	ctrl     chan pack
 	id       uuid.UUID
 	interval [shepIntCap]int16
-	limit    uint16
+	_        [2]byte
 	code     stateCode
 	iLen     uint8
 
@@ -166,7 +153,7 @@ type shepherd struct {
 	report report
 }
 
-func (this *shepherd) SetConfig(config []byte) error {
+func (s *shepherd) SetConfig(config []byte) error {
 	cfg := new(proto.ShepherdConfig)
 	if err := protobuf.Unmarshal(config, cfg); err != nil {
 		return err
@@ -174,10 +161,6 @@ func (this *shepherd) SetConfig(config []byte) error {
 
 	if cfg.Ignore == nil {
 		return errNil
-	}
-
-	if cfg.Limit < 1 || cfg.Limit > math.MaxUint16 {
-		return errInvalid
 	}
 
 	if cfg.Interval == nil {
@@ -207,71 +190,70 @@ func (this *shepherd) SetConfig(config []byte) error {
 		return errInvalid
 	}
 
-	this.in = shepInCfg{
+	s.in = shepInCfg{
 		ignore:   cfg.Ignore,
 		interval: buf,
-		limit:    uint16(cfg.Limit),
 		iLen:     uint8(n),
 		config:   config,
 	}
 
-	return send(this.ctrl, update)
+	return send(s.ctrl, update)
 }
 
-func (this *shepherd) Run() error { return this.tryBoot() }
+func (s *shepherd) Run() error { return s.tryBoot() }
 
-func (this *shepherd) tryBoot() error {
-	this.mu.Lock()
-	if this.code == Init || this.code == Off {
-		this.reportState(Booting)
-		this.mu.Unlock()
+func (s *shepherd) tryBoot() error {
+	s.mu.Lock()
+	if s.code == Init || s.code == Off {
+		s.reportState(Booting)
+		s.mu.Unlock()
 
-		go this.microKernel()
+		go s.microKernel()
 		return nil
 	}
 
-	this.mu.Unlock()
+	s.mu.Unlock()
 	return errInvalid
 }
 
-func (this *shepherd) microKernel() { // TODO: ...
-	writer := this.sink.Symbol(core.Key(math.MaxUint8))
+func (s *shepherd) microKernel() { // TODO: ...
+	writer := s.sink.Symbol(core.Key(math.MaxUint8))
 start:
-	reader := this.source.Symbol(core.Key(math.MaxUint8))
+	reader := s.source.Symbol(core.Key(math.MaxUint8))
 	if err := reader.Open(); err != nil {
-		this.reportFault(errOpen, err)
+		s.reportFault(errOpen, err)
 		return
 	}
 
 active:
-	this.reportState(On)
+	s.reportState(On)
 	for {
 		select {
-		case pack := <-this.ctrl:
+		case pack := <-s.ctrl:
 			switch pack.cmd {
 			case shutdown:
-				this.awkOkTransitionTo(pack, reader, Off)
+				s.awkOkTransitionTo(pack, reader, Off)
 				return
 			case pause:
-				this.awkOk(pack)
+				s.awkOk(pack)
 				goto sleep
 			case resume:
-				this.awkErr(pack, errInvalid)
+				s.awkOk(pack)
 				continue
 			case restart:
-				this.awkOkTransitionTo(pack, reader, Booting)
+				s.awkOkTransitionTo(pack, reader, Booting)
 				goto start
 			case update:
-				this.awkOkTransitionTo(pack, nil, Updating)
-				this.updateConfig()
+				s.awkOkTransitionTo(pack, nil, Updating)
+				s.syncInConfig()
 				goto active
 			default:
-				this.awkErr(pack, errUnknown)
+				s.awkErr(pack, errUnknown)
 				continue
 			}
-		default:
+		default: // TODO: ...
 			if err := reader.Next(); err != nil {
-				this.reportFault(errNext, err)
+				s.reportFault(errNext, err)
 				return
 			}
 
@@ -281,14 +263,14 @@ active:
 			)
 
 			if event.Online {
-				this.handleOnline(key)
+				s.handleOnline(key)
 			} else {
-				this.handleOffline(key)
+				s.handleOffline(key)
 			}
 
 			if err := writer.Write(event); err != nil {
 				reader.Close()
-				this.reportFault(errWrite, err)
+				s.reportFault(errWrite, err)
 				return
 			}
 
@@ -297,55 +279,205 @@ active:
 	}
 
 sleep:
-	this.reportState(Suspended)
-	pack := <-this.ctrl
+	s.reportState(Suspended)
+	pack := <-s.ctrl
 	switch pack.cmd {
 	case shutdown:
-		this.awkOkTransitionTo(pack, reader, Off)
+		s.awkOkTransitionTo(pack, reader, Off)
 		return
 	case pause:
-		this.awkErr(pack, errInvalid)
+		s.awkOk(pack)
 		goto sleep
 	case resume:
-		this.awkOk(pack)
+		s.awkOk(pack)
 		goto active
 	case restart:
-		this.awkOkTransitionTo(pack, reader, Booting)
+		s.awkOkTransitionTo(pack, reader, Booting)
 		goto start
 	case update:
-		this.awkOkTransitionTo(pack, nil, Updating)
-		this.updateConfig()
+		s.awkOkTransitionTo(pack, nil, Updating)
+		s.syncInConfig()
 		goto sleep
 	default:
-		this.awkErr(pack, errUnknown)
+		s.awkErr(pack, errUnknown)
 		goto sleep
 	}
 }
 
-func (this *shepherd) handleOnline(key core.Key)  { this.forEach(key, this.resumeOrSpawn) }
-func (this *shepherd) handleOffline(key core.Key) { this.forEach(key, this.linker.PauseID) }
+func (s *shepherd) reportState(code stateCode) {
+	s.since = kit.UnixNano()
+	s.code = code
+	s.report = newStateReport(shepName, shepVersion, code)
+}
 
-func (this *shepherd) forEach(key core.Key, yield func(uuid.UUID) error) {
-	if this.ignore[key] {
+func (s *shepherd) reportFault(code errorCode, upstream error) {
+	s.since = kit.UnixNano()
+	s.code = Fault
+	s.report = newFaultReport(shepName, shepVersion, code, upstream)
+}
+
+func (s *shepherd) awkOk(cmd pack)             { kit.Close(cmd.awk) }
+func (s *shepherd) awkErr(cmd pack, err error) { cmd.awk <- err; kit.Close(cmd.awk) }
+
+func (s *shepherd) awkOkTransitionTo(cmd pack, reader source.Reader[core.SymbolEvent], code stateCode) {
+	kit.Close(cmd.awk)
+
+	if reader != nil {
+		reader.Close()
+	}
+
+	s.reportState(code)
+}
+
+func (s *shepherd) syncInConfig() {
+	ignored, visible := s.diffIgnore()
+	newInt, delInt, newIntLen, delIntLen := s.diffInterval()
+
+	for _, key := range ignored {
+		s.killBook(key)
+		s.killTrade(key)
+		for _, value := range s.interval[:s.iLen] {
+			s.killCandle(key, value)
+		}
+	}
+
+	supported := s.source.Supported()
+	if delIntLen > 0 {
+		for _, key := range supported {
+			if s.ignore[key] || s.in.ignore[key] {
+				continue
+			}
+
+			for _, value := range delInt[:delIntLen] {
+				s.killCandle(key, value)
+			}
+		}
+	}
+
+	s.ignore = s.in.ignore
+	s.interval = s.in.interval
+	s.iLen = s.in.iLen
+
+	spawned := make(map[core.Key]bool, len(visible))
+	for _, key := range visible {
+		spawned[key] = true
+		s.spawnBook(key)
+		s.spawnTrade(key)
+		for _, value := range s.interval[:s.iLen] {
+			s.spawnCandle(key, value)
+		}
+	}
+
+	if newIntLen > 0 {
+		for _, key := range supported {
+			if s.ignore[key] || spawned[key] {
+				continue
+			}
+
+			for _, value := range newInt[:newIntLen] {
+				s.spawnCandle(key, value)
+			}
+		}
+	}
+}
+
+func (s *shepherd) diffIgnore() (in, out []core.Key) {
+	var (
+		added      = make([]core.Key, 0, 64)
+		subtracted = make([]core.Key, 0, 64)
+	)
+
+	for key := range s.in.ignore {
+		if !s.ignore[key] {
+			added = append(added, key)
+		}
+	}
+
+	for key := range s.ignore {
+		if !s.in.ignore[key] {
+			subtracted = append(subtracted, key)
+		}
+	}
+
+	return added, subtracted
+}
+
+func (s *shepherd) diffInterval() (in, out [shepIntCap]int16, inLen, outLen uint8) {
+	var (
+		added, subtracted [shepIntCap]int16
+		addLen, subLen    uint8
+
+		old, new           = s.interval, s.in.interval
+		oldLen, newLen     = s.iLen, s.in.iLen
+		oldIndex, newIndex uint8
+	)
+
+	for oldIndex < oldLen && newIndex < newLen {
+		old, new := old[oldIndex], new[newIndex]
+		switch {
+		case old == new:
+			oldIndex++
+			newIndex++
+		case old < new:
+			subtracted[subLen] = old
+			subLen++
+			oldIndex++
+		case old > new:
+			added[addLen] = new
+			addLen++
+			newIndex++
+		}
+	}
+
+	for oldIndex < oldLen {
+		subtracted[subLen] = old[oldIndex]
+		subLen++
+		oldIndex++
+	}
+
+	for newIndex < newLen {
+		added[addLen] = new[newIndex]
+		addLen++
+		newIndex++
+	}
+
+	return added, subtracted, addLen, subLen
+}
+
+func (s *shepherd) killBook(key core.Key)                  { s.kill(s.spawnID(core.Book, key)) }
+func (s *shepherd) killTrade(key core.Key)                 { s.kill(s.spawnID(core.Trade, key)) }
+func (s *shepherd) killCandle(key core.Key, minute int16)  { s.kill(s.candleSpawnID(key, minute)) }
+func (s *shepherd) spawnBook(key core.Key)                 { s.addBook(s.spawnID(core.Book, key)) }
+func (s *shepherd) spawnTrade(key core.Key)                { s.addTrade(s.spawnID(core.Trade, key)) }
+func (s *shepherd) spawnCandle(key core.Key, minute int16) { s.addCandle(s.candleSpawnID(key, minute)) }
+func (s *shepherd) handleOnline(key core.Key)              { s.forEach(key, s.start) }
+func (s *shepherd) handleOffline(key core.Key)             { s.forEach(key, s.pause) }
+
+func (s *shepherd) forEach(key core.Key, yield func(uuid.UUID) error) {
+	if s.ignore[key] {
 		return
 	}
 
-	yield(this.spawnID(core.Book, key))
-	yield(this.spawnID(core.Trade, key))
+	yield(s.spawnID(core.Book, key))
+	yield(s.spawnID(core.Trade, key))
 
 	var (
-		interval = this.interval
-		iLen     = this.iLen
+		interval = s.interval
+		iLen     = s.iLen
 	)
 
 	for _, value := range interval[:iLen] {
-		key := core.PromoteSymbolKey(key, int64(value))
-		yield(this.spawnID(core.Candle, key))
+		yield(s.candleSpawnID(key, value))
 	}
 }
 
-func (this *shepherd) spawnID(domain core.Domain, key core.Key) uuid.UUID {
-	msb := binary.LittleEndian.Uint64(this.id[:8])
+func (s *shepherd) candleSpawnID(key core.Key, minute int16) uuid.UUID {
+	key = core.PromoteSymbolKey(key, int64(minute))
+	return s.spawnID(core.Candle, key)
+}
+
+func (s *shepherd) spawnID(domain core.Domain, key core.Key) uuid.UUID {
+	msb := binary.LittleEndian.Uint64(s.id[:8])
 	msb &= ^uint64(0xFFFF)
 	msb |= uint64(0x8) << 12
 	msb |= uint64(domain)
@@ -359,77 +491,59 @@ func (this *shepherd) spawnID(domain core.Domain, key core.Key) uuid.UUID {
 	return id
 }
 
-func (this *shepherd) updateConfig() {
-	// TODO: ...
-}
-
-func (this *shepherd) resumeOrSpawn(id uuid.UUID) error {
-	if this.linker.ResumeID(id) == nil {
+func (s *shepherd) start(id uuid.UUID) error {
+	if s.resume(id) == nil {
 		return nil
 	}
 
 	switch core.Domain(binary.BigEndian.Uint64(id[:8]) & 0x0FFF) {
 	case core.Book:
-		return this.linker.AddBook(this.newBookFactory(id))
+		return s.addBook(id)
 	case core.Candle:
-		key := core.Key(binary.BigEndian.Uint64(id[8:]) &^ (3 << 62))
-		_, interval := core.DecodeCandleKey(key)
-		return this.linker.AddCandle(this.newCandleFactory(id, interval))
+		return s.addCandle(id)
 	case core.Trade:
-		return this.linker.AddTrade(this.newTradeFactory(id))
+		return s.addTrade(id)
 	default:
 		return errInvalid
 	}
 }
 
-func (this *shepherd) newBookFactory(id uuid.UUID) core.BookFactory
-func (this *shepherd) newCandleFactory(id uuid.UUID, interval time.Duration) core.CandleFactory
-func (this *shepherd) newTradeFactory(id uuid.UUID) core.TradeFactory
+func (s *shepherd) pause(id uuid.UUID) error     { return s.linker.PauseID(id) }
+func (s *shepherd) resume(id uuid.UUID) error    { return s.linker.ResumeID(id) }
+func (s *shepherd) kill(id uuid.UUID) error      { return s.linker.Kill(id) }
+func (s *shepherd) addBook(id uuid.UUID) error   { return s.linker.AddBook(s.newBookFactory(id)) }
+func (s *shepherd) addCandle(id uuid.UUID) error { return s.linker.AddCandle(s.newCandleFactory(id)) }
+func (s *shepherd) addTrade(id uuid.UUID) error  { return s.linker.AddTrade(s.newTradeFactory(id)) }
 
-func (this *shepherd) awkOk(cmd pack)             { kit.Close(cmd.awk) }
-func (this *shepherd) awkErr(cmd pack, err error) { cmd.awk <- err; kit.Close(cmd.awk) }
+func (s *shepherd) newBookFactory(id uuid.UUID) core.BookFactory
 
-func (this *shepherd) awkOkTransitionTo(cmd pack, reader source.Reader[core.SymbolEvent], code stateCode) {
-	kit.Close(cmd.awk)
-
-	if reader != nil {
-		reader.Close()
-	}
-
-	this.reportState(code)
-}
-
-func (this *shepherd) reportState(code stateCode) {
-	this.since = kit.UnixNano()
-	this.code = code
-	this.report = newStateReport(shepName, shepVersion, code)
-}
-
-func (this *shepherd) reportFault(code errorCode, upstream error) {
-	this.since = kit.UnixNano()
-	this.code = Fault
-	this.report = newFaultReport(shepName, shepVersion, code, upstream)
-}
-
-func (this *shepherd) Shutdown() error      { return send(this.ctrl, shutdown) }
-func (this *shepherd) Pause() error         { return send(this.ctrl, pause) }
-func (this *shepherd) Resume() error        { return send(this.ctrl, resume) }
-func (this *shepherd) Restart() error       { return send(this.ctrl, restart) }
-func (this *shepherd) Tag() string          { return "control" }
-func (this *shepherd) Config() []byte       { return this.in.config }
-func (this *shepherd) Status() (int, int64) { return int(this.code), this.since }
-func (this *shepherd) Report() []byte       { return this.report[:] }
-func (this *shepherd) ID() uuid.UUID        { return this.id }
-
-func (this *shepherd) Initialize(registry core.SymbolLogRegistry) error {
-	this.registry = registry
-	this.reportState(Init)
+func (s *shepherd) newCandleFactory(id uuid.UUID) core.CandleFactory {
+	// key := core.Key(binary.BigEndian.Uint64(id[8:]) &^ (3 << 62))
+	// _, interval := core.DecodeCandleKey(key)
 	return nil
 }
 
-func (this *shepherd) WithLinker(linker core.Linker) core.SymbolDaemon {
-	this.linker = linker
-	return this
+func (s *shepherd) newTradeFactory(id uuid.UUID) core.TradeFactory
+
+func (s *shepherd) Shutdown() error      { return send(s.ctrl, shutdown) }
+func (s *shepherd) Pause() error         { return send(s.ctrl, pause) }
+func (s *shepherd) Resume() error        { return send(s.ctrl, resume) }
+func (s *shepherd) Restart() error       { return send(s.ctrl, restart) }
+func (s *shepherd) Tag() string          { return "control" }
+func (s *shepherd) Config() []byte       { return s.in.config }
+func (s *shepherd) Status() (int, int64) { return int(s.code), s.since }
+func (s *shepherd) Report() []byte       { return s.report[:] }
+func (s *shepherd) ID() uuid.UUID        { return s.id }
+
+func (s *shepherd) Initialize(registry core.SymbolLogRegistry) error {
+	s.registry = registry
+	s.reportState(Init)
+	return nil
+}
+
+func (s *shepherd) WithLinker(linker core.Linker) core.SymbolDaemon {
+	s.linker = linker
+	return s
 }
 
 func okInterval(minute int64) bool { return core.OkIntervalMinute(minute) }
