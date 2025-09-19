@@ -6,7 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"io"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/mattgonewild/chasm/core"
 )
@@ -17,7 +20,7 @@ type (
 		Book(key core.Key) Reader[core.BookEvent]
 		Candle(key core.Key) Reader[core.CandleEvent]
 		Trade(key core.Key) Reader[core.TradeEvent]
-		Supported() []core.Key
+		Get() KeyGetter
 	}
 
 	Reader[T core.Event] interface {
@@ -33,6 +36,12 @@ type (
 		Unsubscribe(key core.Key) []byte
 		Decode(frame []byte) (T, error)
 	}
+
+	KeyGetter interface {
+		Online() []core.Key
+		Offline() []core.Key
+		All() []core.Key
+	}
 )
 
 type source struct {
@@ -41,6 +50,7 @@ type source struct {
 	candle Proto[core.CandleEvent]
 	trade  Proto[core.TradeEvent]
 	origin string
+	getter KeyGetter
 }
 
 func NewSource(
@@ -49,6 +59,7 @@ func NewSource(
 	candle Proto[core.CandleEvent],
 	trade Proto[core.TradeEvent],
 	origin string,
+	getter KeyGetter,
 ) Source {
 	return &source{
 		symbol: symbol,
@@ -56,6 +67,7 @@ func NewSource(
 		candle: candle,
 		trade:  trade,
 		origin: origin,
+		getter: getter,
 	}
 }
 
@@ -75,7 +87,7 @@ func (this *source) Trade(key core.Key) Reader[core.TradeEvent] {
 	return newBufWebSockReader(this.origin, this.trade, key)
 }
 
-func (this *source) Supported() []core.Key { return make([]core.Key, 0) }
+func (this *source) Get() KeyGetter { return this.getter }
 
 type bufWebSockReader[T core.Event] struct {
 	conn    *tls.Conn
@@ -423,4 +435,46 @@ start:
 
 		return length
 	}
+}
+
+// TODO: we should be returning an error
+type UnmarshalKeyFunc func(raw []byte) []core.Key
+
+type httpGetter struct {
+	online  UnmarshalKeyFunc
+	offline UnmarshalKeyFunc
+	all     UnmarshalKeyFunc
+	req     http.Request
+	client  http.Client
+}
+
+func NewKeyGetter(online, offline, all UnmarshalKeyFunc, req http.Request) KeyGetter {
+	return &httpGetter{
+		online:  online,
+		offline: offline,
+		all:     all,
+		req:     req,
+		client: http.Client{
+			Timeout: 15 * time.Second,
+		},
+	}
+}
+
+func (this *httpGetter) Online() []core.Key  { return this.handle(this.online) }
+func (this *httpGetter) Offline() []core.Key { return this.handle(this.offline) }
+func (this *httpGetter) All() []core.Key     { return this.handle(this.all) }
+
+func (this *httpGetter) handle(unmarshal UnmarshalKeyFunc) []core.Key {
+	resp, err := this.client.Do(&this.req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+
+	return unmarshal(body)
 }

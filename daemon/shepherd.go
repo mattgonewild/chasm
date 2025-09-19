@@ -341,9 +341,9 @@ func (s *shepherd) syncInConfig() {
 		}
 	}
 
-	supported := s.source.Supported()
 	if delIntLen > 0 {
-		for _, key := range supported {
+		all := s.source.Get().All()
+		for _, key := range all {
 			if s.ignore[key] || s.in.ignore[key] {
 				continue
 			}
@@ -369,7 +369,8 @@ func (s *shepherd) syncInConfig() {
 	}
 
 	if newIntLen > 0 {
-		for _, key := range supported {
+		online := s.source.Get().Online()
+		for _, key := range online {
 			if s.ignore[key] || spawned[key] {
 				continue
 			}
