@@ -88,6 +88,10 @@ func DecodeSymbolKey(key Key) string {
 	return string(buf[:n])
 }
 
+// PromoteSymbolKey promotes a symbol Key to a candle Key by appending a minute count.
+// The count must be greater than zero and less than 2048.
+func PromoteSymbolKey(key Key, minute int64) Key { return Key((key << intBit) | uint64(minute)) }
+
 // EncodeCandleKey encodes a symbol and interval into a Key.
 //
 // The symbol must consist only of [ A-Z . - ] and be at most 10 characters long,

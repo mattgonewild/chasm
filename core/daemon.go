@@ -53,7 +53,6 @@ type (
 	Control[T any] interface {
 		Producer[T]
 		WithLinker(linker Linker) Control[T]
-		WithUnlinker(unlinker Unlinker) Control[T]
 	}
 
 	Producer[T any] interface {

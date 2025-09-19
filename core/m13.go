@@ -76,7 +76,7 @@ func (this *Manager13) AddSymbol(factory SymbolFactory) error {
 		return ErrInvalid
 	}
 
-	daemon := factory.New().WithLinker(this).WithUnlinker(this)
+	daemon := factory.New().WithLinker(this)
 	if err := daemon.Initialize(this.registry.Symbol()); err != nil {
 		return err
 	}
@@ -257,7 +257,7 @@ func (this *Manager13) newSymbolDaemon(id uuid.UUID) (Daemon, error) {
 		return nil, err
 	}
 
-	daemon := factory.New().WithLinker(this).WithUnlinker(this)
+	daemon := factory.New().WithLinker(this)
 	return daemon, daemon.Initialize(this.registry.Symbol())
 }
 

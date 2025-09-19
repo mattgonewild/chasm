@@ -19,23 +19,18 @@ type (
 		SetConfig(hidden bool, selector Selector, config []byte) error
 		Hide(selector Selector) error
 		Show(selector Selector) error
-		Unlinker
 		Shutdown() error
 	}
 
 	Linker interface {
 		Liveness
-		ResumeID(id uuid.UUID) error
 		AddSymbol(SymbolFactory) error
 		AddBook(BookFactory) error
 		AddCandle(CandleFactory) error
 		AddTrade(TradeFactory) error
 		AddSchedule(ScheduleFactory) error
 		AddData(DataFactory) error
-	}
-
-	Unlinker interface {
-		Liveness
+		ResumeID(id uuid.UUID) error
 		PauseID(id uuid.UUID) error
 		Kill(id uuid.UUID) error
 	}

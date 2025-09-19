@@ -18,7 +18,7 @@ import (
 const (
 	shepName    string = "TODO"
 	shepVersion string = "TODO"
-	shepIntCap  uint8  = 13
+	shepIntCap  uint8  = 10
 )
 
 type ShepherdConfig struct {
@@ -117,6 +117,7 @@ func (this *shepherdFactory) New() core.SymbolDaemon {
 	return &shepherd{
 		since:    kit.UnixNano(),
 		ignore:   this.ignore,
+		ctrl:     make(chan pack),
 		id:       this.id,
 		interval: this.interval,
 		limit:    this.limit,
@@ -124,15 +125,20 @@ func (this *shepherdFactory) New() core.SymbolDaemon {
 		iLen:     this.iLen,
 		source:   this.source,
 		sink:     this.sink,
-		config:   this.config,
-		ctrl:     make(chan pack),
-		report:   newStateReport(shepName, shepVersion, Await),
+		in: shepInCfg{
+			ignore:   this.ignore,
+			interval: this.interval,
+			limit:    this.limit,
+			iLen:     this.iLen,
+			config:   this.config,
+		},
+		report: newStateReport(shepName, shepVersion, Await),
 	}
 }
 
 func (this *shepherdFactory) ID() uuid.UUID { return this.id }
 
-type pendingShepUpdate struct {
+type shepInCfg struct {
 	ignore   map[core.Key]bool
 	interval [shepIntCap]int16
 	limit    uint16
@@ -143,6 +149,7 @@ type pendingShepUpdate struct {
 type shepherd struct {
 	since    int64
 	ignore   map[core.Key]bool
+	ctrl     chan pack
 	id       uuid.UUID
 	interval [shepIntCap]int16
 	limit    uint16
@@ -154,12 +161,9 @@ type shepherd struct {
 	registry core.SymbolLogRegistry
 	linker   core.Linker
 
-	config   []byte // TODO: ...
-	unlinker core.Unlinker
-	mu       sync.Mutex
-	ctrl     chan pack
-	pending  *pendingShepUpdate // TODO: nil
-	report   report
+	in     shepInCfg
+	mu     sync.Mutex
+	report report
 }
 
 func (this *shepherd) SetConfig(config []byte) error {
@@ -203,15 +207,13 @@ func (this *shepherd) SetConfig(config []byte) error {
 		return errInvalid
 	}
 
-	this.mu.Lock()
-	this.pending = &pendingShepUpdate{
+	this.in = shepInCfg{
 		ignore:   cfg.Ignore,
 		interval: buf,
 		limit:    uint16(cfg.Limit),
 		iLen:     uint8(n),
 		config:   config,
 	}
-	this.mu.Unlock()
 
 	return send(this.ctrl, update)
 }
@@ -321,12 +323,10 @@ sleep:
 }
 
 func (this *shepherd) handleOnline(key core.Key)  { this.forEach(key, this.resumeOrSpawn) }
-func (this *shepherd) handleOffline(key core.Key) { this.forEach(key, this.unlinker.PauseID) }
+func (this *shepherd) handleOffline(key core.Key) { this.forEach(key, this.linker.PauseID) }
 
 func (this *shepherd) forEach(key core.Key, yield func(uuid.UUID) error) {
-	this.mu.Lock()
 	if this.ignore[key] {
-		this.mu.Unlock()
 		return
 	}
 
@@ -338,11 +338,10 @@ func (this *shepherd) forEach(key core.Key, yield func(uuid.UUID) error) {
 		iLen     = this.iLen
 	)
 
-	for range interval[:iLen] {
-		yield(this.spawnID(core.Candle, key)) // TODO: we have to pack the interval in here
+	for _, value := range interval[:iLen] {
+		key := core.PromoteSymbolKey(key, int64(value))
+		yield(this.spawnID(core.Candle, key))
 	}
-
-	this.mu.Unlock()
 }
 
 func (this *shepherd) spawnID(domain core.Domain, key core.Key) uuid.UUID {
@@ -360,7 +359,9 @@ func (this *shepherd) spawnID(domain core.Domain, key core.Key) uuid.UUID {
 	return id
 }
 
-func (this *shepherd) updateConfig()
+func (this *shepherd) updateConfig() {
+	// TODO: ...
+}
 
 func (this *shepherd) resumeOrSpawn(id uuid.UUID) error {
 	if this.linker.ResumeID(id) == nil {
@@ -415,7 +416,7 @@ func (this *shepherd) Pause() error         { return send(this.ctrl, pause) }
 func (this *shepherd) Resume() error        { return send(this.ctrl, resume) }
 func (this *shepherd) Restart() error       { return send(this.ctrl, restart) }
 func (this *shepherd) Tag() string          { return "control" }
-func (this *shepherd) Config() []byte       { return this.config }
+func (this *shepherd) Config() []byte       { return this.in.config }
 func (this *shepherd) Status() (int, int64) { return int(this.code), this.since }
 func (this *shepherd) Report() []byte       { return this.report[:] }
 func (this *shepherd) ID() uuid.UUID        { return this.id }
@@ -428,11 +429,6 @@ func (this *shepherd) Initialize(registry core.SymbolLogRegistry) error {
 
 func (this *shepherd) WithLinker(linker core.Linker) core.SymbolDaemon {
 	this.linker = linker
-	return this
-}
-
-func (this *shepherd) WithUnlinker(unlinker core.Unlinker) core.SymbolDaemon {
-	this.unlinker = unlinker
 	return this
 }
 
