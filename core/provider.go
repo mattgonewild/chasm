@@ -1,13 +1,9 @@
 package core
 
-import (
-	"time"
-
-	"github.com/mattgonewild/common"
-)
+import "time"
 
 type (
-	Provider[T common.UnixTimestamped] interface {
+	Provider[T UnixTimestamped] interface {
 		Get() T
 	}
 
@@ -17,18 +13,18 @@ type (
 		Before(endUnixTime int64) BrokerageDataReader
 		At(floorUnixTime int64) BrokerageDataReader
 		After(startUnixTime int64) BrokerageDataReader
-		common.UnixTimestamped
+		UnixTimestamped
 	}
 
 	BrokerageDataReader interface {
-		Symbol(key Key) (common.Cursor[SymbolEvent], error)
-		Book(key Key) (common.Cursor[BookEvent], error)
-		Candle(key Key) (common.Cursor[CandleEvent], error)
-		Trade(key Key) (common.Cursor[TradeEvent], error)
-		Schedule(key Key) (common.Cursor[ScheduleEvent], error)
+		Symbol(key Key) (Cursor[SymbolEvent], error)
+		Book(key Key) (Cursor[BookEvent], error)
+		Candle(key Key) (Cursor[CandleEvent], error)
+		Trade(key Key) (Cursor[TradeEvent], error)
+		Schedule(key Key) (Cursor[ScheduleEvent], error)
 	}
 
-	newCursorFunc[T common.UnixTimestamped] func(log common.Log[T], boundUnixTime int64) (common.Cursor[T], error)
+	newCursorFunc[T UnixTimestamped] func(log EventLog[T], boundUnixTime int64) (Cursor[T], error)
 )
 
 type brokerageDataProvider struct {
@@ -127,7 +123,7 @@ func newBrokerageDataReader(
 	}
 }
 
-func (this *brokerageDataReader) Symbol(key Key) (common.Cursor[SymbolEvent], error) {
+func (this *brokerageDataReader) Symbol(key Key) (Cursor[SymbolEvent], error) {
 	log, err := this.registry.Symbol().Get(key)
 	if err != nil {
 		return nil, err
@@ -136,7 +132,7 @@ func (this *brokerageDataReader) Symbol(key Key) (common.Cursor[SymbolEvent], er
 	return this.newSymbolCursor(log, this.boundUnixTime)
 }
 
-func (this *brokerageDataReader) Book(key Key) (common.Cursor[BookEvent], error) {
+func (this *brokerageDataReader) Book(key Key) (Cursor[BookEvent], error) {
 	log, err := this.registry.Book().Get(key)
 	if err != nil {
 		return nil, err
@@ -145,7 +141,7 @@ func (this *brokerageDataReader) Book(key Key) (common.Cursor[BookEvent], error)
 	return this.newBookCursor(log, this.boundUnixTime)
 }
 
-func (this *brokerageDataReader) Candle(key Key) (common.Cursor[CandleEvent], error) {
+func (this *brokerageDataReader) Candle(key Key) (Cursor[CandleEvent], error) {
 	log, err := this.registry.Candle().Get(key)
 	if err != nil {
 		return nil, err
@@ -154,7 +150,7 @@ func (this *brokerageDataReader) Candle(key Key) (common.Cursor[CandleEvent], er
 	return this.newCandleCursor(log, this.boundUnixTime)
 }
 
-func (this *brokerageDataReader) Trade(key Key) (common.Cursor[TradeEvent], error) {
+func (this *brokerageDataReader) Trade(key Key) (Cursor[TradeEvent], error) {
 	log, err := this.registry.Trade().Get(key)
 	if err != nil {
 		return nil, err
@@ -163,7 +159,7 @@ func (this *brokerageDataReader) Trade(key Key) (common.Cursor[TradeEvent], erro
 	return this.newTradeCursor(log, this.boundUnixTime)
 }
 
-func (this *brokerageDataReader) Schedule(key Key) (common.Cursor[ScheduleEvent], error) {
+func (this *brokerageDataReader) Schedule(key Key) (Cursor[ScheduleEvent], error) {
 	log, err := this.registry.Schedule().Get(key)
 	if err != nil {
 		return nil, err
@@ -172,20 +168,20 @@ func (this *brokerageDataReader) Schedule(key Key) (common.Cursor[ScheduleEvent]
 	return this.newScheduleCursor(log, this.boundUnixTime)
 }
 
-func newCursorBeforeFunc[T common.UnixTimestamped]() newCursorFunc[T] {
-	return func(log common.Log[T], endUnixTime int64) (common.Cursor[T], error) {
+func newCursorBeforeFunc[T UnixTimestamped]() newCursorFunc[T] {
+	return func(log EventLog[T], endUnixTime int64) (Cursor[T], error) {
 		return log.NewCursorBefore(endUnixTime)
 	}
 }
 
-func newCursorAtFunc[T common.UnixTimestamped]() newCursorFunc[T] {
-	return func(log common.Log[T], floorUnixTime int64) (common.Cursor[T], error) {
+func newCursorAtFunc[T UnixTimestamped]() newCursorFunc[T] {
+	return func(log EventLog[T], floorUnixTime int64) (Cursor[T], error) {
 		return log.NewCursorAt(floorUnixTime)
 	}
 }
 
-func newCursorAfterFunc[T common.UnixTimestamped]() newCursorFunc[T] {
-	return func(log common.Log[T], startUnixTime int64) (common.Cursor[T], error) {
+func newCursorAfterFunc[T UnixTimestamped]() newCursorFunc[T] {
+	return func(log EventLog[T], startUnixTime int64) (Cursor[T], error) {
 		return log.NewCursorAfter(startUnixTime)
 	}
 }

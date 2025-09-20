@@ -438,17 +438,17 @@ start:
 }
 
 // TODO: we should be returning an error
-type UnmarshalKeyFunc func(raw []byte) []core.Key
+type DecodeKeyFunc func(raw []byte) []core.Key
 
 type httpGetter struct {
-	online  UnmarshalKeyFunc
-	offline UnmarshalKeyFunc
-	all     UnmarshalKeyFunc
+	online  DecodeKeyFunc
+	offline DecodeKeyFunc
+	all     DecodeKeyFunc
 	req     http.Request
 	client  http.Client
 }
 
-func NewKeyGetter(online, offline, all UnmarshalKeyFunc, req http.Request) KeyGetter {
+func NewKeyGetter(online, offline, all DecodeKeyFunc, req http.Request) KeyGetter {
 	return &httpGetter{
 		online:  online,
 		offline: offline,
@@ -464,7 +464,7 @@ func (this *httpGetter) Online() []core.Key  { return this.handle(this.online) }
 func (this *httpGetter) Offline() []core.Key { return this.handle(this.offline) }
 func (this *httpGetter) All() []core.Key     { return this.handle(this.all) }
 
-func (this *httpGetter) handle(unmarshal UnmarshalKeyFunc) []core.Key {
+func (this *httpGetter) handle(decode DecodeKeyFunc) []core.Key {
 	resp, err := this.client.Do(&this.req)
 	if err != nil {
 		return nil
@@ -476,5 +476,5 @@ func (this *httpGetter) handle(unmarshal UnmarshalKeyFunc) []core.Key {
 		return nil
 	}
 
-	return unmarshal(body)
+	return decode(body)
 }

@@ -1,18 +1,13 @@
 package core
 
-import (
-	"github.com/mattgonewild/common"
-	"github.com/mattgonewild/kit"
-)
+import "github.com/mattgonewild/kit"
 
 type (
-	Registry[T any] = common.Registry[Key, T]
-
-	SymbolLogRegistry   = Registry[common.Log[SymbolEvent]]
-	BookLogRegistry     = Registry[common.Log[BookEvent]]
-	CandleLogRegistry   = Registry[common.Log[CandleEvent]]
-	TradeLogRegistry    = Registry[common.Log[TradeEvent]]
-	ScheduleLogRegistry = Registry[common.Log[ScheduleEvent]]
+	SymbolLogRegistry   = Registry[EventLog[SymbolEvent]]
+	BookLogRegistry     = Registry[EventLog[BookEvent]]
+	CandleLogRegistry   = Registry[EventLog[CandleEvent]]
+	TradeLogRegistry    = Registry[EventLog[TradeEvent]]
+	ScheduleLogRegistry = Registry[EventLog[ScheduleEvent]]
 
 	BrokerageDataLogRegistry interface {
 		Symbol() SymbolLogRegistry
@@ -24,15 +19,15 @@ type (
 )
 
 type brokerageDataLogRegistry struct {
-	symbol   kit.CoarseRegistry[Key, common.Log[SymbolEvent]]
+	symbol   kit.CoarseRegistry[Key, EventLog[SymbolEvent]]
 	_        [32]byte
-	book     kit.CoarseRegistry[Key, common.Log[BookEvent]]
+	book     kit.CoarseRegistry[Key, EventLog[BookEvent]]
 	_        [32]byte
-	candle   kit.CoarseRegistry[Key, common.Log[CandleEvent]]
+	candle   kit.CoarseRegistry[Key, EventLog[CandleEvent]]
 	_        [32]byte
-	trade    kit.CoarseRegistry[Key, common.Log[TradeEvent]]
+	trade    kit.CoarseRegistry[Key, EventLog[TradeEvent]]
 	_        [32]byte
-	schedule kit.CoarseRegistry[Key, common.Log[ScheduleEvent]]
+	schedule kit.CoarseRegistry[Key, EventLog[ScheduleEvent]]
 	_        [32]byte
 }
 

@@ -8,7 +8,7 @@ type Event interface {
 
 type SymbolEvent struct {
 	Online        bool
-	Symbol        string
+	Symbol        uint64
 	MinOrder      uint32
 	MinIncrement  uint32
 	EventUnixTime int64
@@ -36,7 +36,7 @@ func (this TradeEvent) IsSell() bool    { return this < 0 }
 func (this TradeEvent) UnixNano() int64 { return int64(this) & math.MaxInt64 }
 
 type ScheduleEvent struct {
-	Symbol         string
+	Symbol         uint64
 	Balance, Basis uint32
 	EventUnixTime  int64
 }

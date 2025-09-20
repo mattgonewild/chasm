@@ -1,14 +1,6 @@
 package core
 
-import (
-	"github.com/google/uuid"
-	"github.com/mattgonewild/common"
-)
-
 type (
-	Configurable = common.Configurable[[]byte]
-	Identifiable = common.Identifiable[uuid.UUID]
-
 	Daemon interface {
 		Configurable
 		Run() error
@@ -36,11 +28,11 @@ type (
 		Identifiable
 	}
 
-	SymbolDaemon   = Control[common.Log[SymbolEvent]]
-	BookDaemon     = Producer[common.Log[BookEvent]]
-	CandleDaemon   = Producer[common.Log[CandleEvent]]
-	TradeDaemon    = Producer[common.Log[TradeEvent]]
-	ScheduleDaemon = Producer[common.Log[ScheduleEvent]]
+	SymbolDaemon   = Control[EventLog[SymbolEvent]]
+	BookDaemon     = Producer[EventLog[BookEvent]]
+	CandleDaemon   = Producer[EventLog[CandleEvent]]
+	TradeDaemon    = Producer[EventLog[TradeEvent]]
+	ScheduleDaemon = Producer[EventLog[ScheduleEvent]]
 	DataDaemon     = Consumer[BrokerageData]
 
 	SymbolFactory   = Factory[SymbolDaemon]
@@ -60,7 +52,7 @@ type (
 		Initialize(registry Registry[T]) error
 	}
 
-	Consumer[T common.UnixTimestamped] interface {
+	Consumer[T UnixTimestamped] interface {
 		Daemon
 		Initialize(provider Provider[T]) error
 	}

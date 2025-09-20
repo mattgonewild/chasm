@@ -127,7 +127,7 @@ func (this *qdbSymbolWriter) Write(event core.SymbolEvent) error {
 	}
 
 	this.sender.putTable(table)
-	this.sender.putInt(symbol, uint(this.key))
+	this.sender.putInt(symbol, uint(event.Symbol))
 	this.sender.putByte(',')
 	this.sender.putBool(online, event.Online)
 	this.sender.putByte(',')
