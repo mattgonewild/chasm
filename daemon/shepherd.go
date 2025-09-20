@@ -2,8 +2,8 @@ package daemon
 
 import (
 	"encoding/binary"
-	"math"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/mattgonewild/chasm/core"
@@ -15,9 +15,13 @@ import (
 )
 
 const (
-	shepName    string = "TODO"
-	shepVersion string = "TODO"
-	shepIntCap  uint8  = 10
+	shepName                string        = "TODO"
+	shepVersion             string        = "TODO"
+	shepIntCap              uint8         = 10
+	shepKey                 core.Key      = 0
+	shepLogStepWindow       time.Duration = 0
+	shepLogRetention        time.Duration = 0
+	shepLogCapPerLinkedNode int           = 0
 )
 
 type ShepherdConfig struct {
@@ -200,15 +204,15 @@ func (s *shepherd) SetConfig(config []byte) error {
 	return send(s.ctrl, update)
 }
 
-func (s *shepherd) Run() error { return s.tryBoot() }
+func (s *shepherd) Run() error { return s.boot() }
 
-func (s *shepherd) tryBoot() error {
+func (s *shepherd) boot() error {
 	s.mu.Lock()
 	if s.code == Init || s.code == Off {
-		s.reportState(Booting)
+		s.state(Booting)
 		s.mu.Unlock()
 
-		go s.microKernel()
+		go s.kernel()
 		return nil
 	}
 
@@ -216,17 +220,22 @@ func (s *shepherd) tryBoot() error {
 	return errInvalid
 }
 
-func (s *shepherd) microKernel() { // TODO: ...
-	writer := s.sink.Symbol(core.Key(math.MaxUint8))
+func (s *shepherd) kernel() {
+	var (
+		writer      = s.getSinkWriter()
+		log, ourLog = s.getEventLog()
+	)
+
+	defer s.freeEventLog(&ourLog)
 start:
-	reader := s.source.Symbol(core.Key(math.MaxUint8))
+	reader := s.getSourceReader()
 	if err := reader.Open(); err != nil {
-		s.reportFault(errOpen, err)
+		s.fault(errOpen, err)
 		return
 	}
 
 active:
-	s.reportState(On)
+	s.state(On)
 	for {
 		select {
 		case pack := <-s.ctrl:
@@ -251,26 +260,30 @@ active:
 				s.awkErr(pack, errUnknown)
 				continue
 			}
-		default: // TODO: ...
+		default:
 			if err := reader.Next(); err != nil {
-				s.reportFault(errNext, err)
+				s.fault(errNext, err)
 				return
 			}
 
-			var (
-				event = reader.Read()
-				key   = core.EncodeSymbolKey(event.Symbol)
-			)
-
+			event := reader.Read()
 			if event.Online {
-				s.handleOnline(key)
+				s.handleOnline(event.Symbol)
 			} else {
-				s.handleOffline(key)
+				s.handleOffline(event.Symbol)
 			}
 
+			if !ourLog {
+				if log, ourLog = s.claimEventLog(); !ourLog {
+					goto sink
+				}
+			}
+			log.Append(event)
+
+		sink:
 			if err := writer.Write(event); err != nil {
 				reader.Close()
-				s.reportFault(errWrite, err)
+				s.fault(errWrite, err)
 				return
 			}
 
@@ -279,7 +292,7 @@ active:
 	}
 
 sleep:
-	s.reportState(Suspended)
+	s.state(Suspended)
 	pack := <-s.ctrl
 	switch pack.cmd {
 	case shutdown:
@@ -304,16 +317,40 @@ sleep:
 	}
 }
 
-func (s *shepherd) reportState(code stateCode) {
+func (s *shepherd) state(code stateCode) {
 	s.since = kit.UnixNano()
 	s.code = code
 	s.report = newStateReport(shepName, shepVersion, code)
 }
 
-func (s *shepherd) reportFault(code errorCode, upstream error) {
+func (s *shepherd) fault(code errorCode, upstream error) {
 	s.since = kit.UnixNano()
 	s.code = Fault
 	s.report = newFaultReport(shepName, shepVersion, code, upstream)
+}
+
+func (s *shepherd) getSourceReader() source.Reader[core.SymbolEvent] { return s.source.Symbol(shepKey) }
+func (s *shepherd) getSinkWriter() sink.Writer[core.SymbolEvent]     { return s.sink.Symbol(shepKey) }
+
+func (s *shepherd) getEventLog() (core.EventLog[core.SymbolEvent], bool) {
+	log, err := s.registry.Get(shepKey)
+	if err != nil {
+		log = kit.NewLog[core.SymbolEvent](shepLogStepWindow, shepLogRetention, shepLogCapPerLinkedNode)
+		s.registry.Register(shepKey, log)
+		return log, true
+	}
+
+	return s.claimEventLog()
+}
+
+func (s *shepherd) freeEventLog(ourLog *bool) {
+	if *ourLog {
+		s.registry.Release(shepKey)
+	}
+}
+
+func (s *shepherd) claimEventLog() (core.EventLog[core.SymbolEvent], bool) {
+	return s.registry.Claim(shepKey)
 }
 
 func (s *shepherd) awkOk(cmd pack)             { kit.Close(cmd.awk) }
@@ -326,7 +363,7 @@ func (s *shepherd) awkOkTransitionTo(cmd pack, reader source.Reader[core.SymbolE
 		reader.Close()
 	}
 
-	s.reportState(code)
+	s.state(code)
 }
 
 func (s *shepherd) syncInConfig() {
@@ -538,7 +575,7 @@ func (s *shepherd) ID() uuid.UUID        { return s.id }
 
 func (s *shepherd) Initialize(registry core.SymbolLogRegistry) error {
 	s.registry = registry
-	s.reportState(Init)
+	s.state(Init)
 	return nil
 }
 
