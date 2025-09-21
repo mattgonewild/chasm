@@ -6,11 +6,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mattgonewild/chasm/core"
-	"github.com/mattgonewild/chasm/daemon/proto"
 	"github.com/mattgonewild/chasm/sink"
 	"github.com/mattgonewild/chasm/source"
 	"github.com/mattgonewild/kit"
-	protobuf "google.golang.org/protobuf/proto"
 )
 
 const (
@@ -22,28 +20,35 @@ const (
 )
 
 type herdUnitFactory[T core.Event] struct {
-	id     uuid.UUID
-	tag    string
 	reader source.Reader[T]
 	writer sink.Writer[T]
+	tag    string
+	id     uuid.UUID
 }
 
-func NewHerdUnitFactory[T core.Event](id uuid.UUID, tag string, reader source.Reader[T], writer sink.Writer[T],
+func newHerdUnitFactory[T core.Event](reader source.Reader[T], writer sink.Writer[T], tag string, id uuid.UUID,
 ) core.Factory[core.Producer[core.EventLog[T]]] {
 	return &herdUnitFactory[T]{
-		id:     id,
-		tag:    tag,
 		reader: reader,
 		writer: writer,
+		tag:    tag,
+		id:     id,
 	}
 }
 
-func (this *herdUnitFactory[T]) New() core.Producer[core.EventLog[T]] { return nil }
-func (this *herdUnitFactory[T]) ID() uuid.UUID                        { return this.id }
-
-type herdUnitInCfg struct {
-	config []byte
+func (this *herdUnitFactory[T]) New() core.Producer[core.EventLog[T]] {
+	return &herdUnit[T]{
+		codesince: newCodeSince(Await),
+		ctrl:      make(chan pack),
+		reader:    this.reader,
+		writer:    this.writer,
+		tag:       this.tag,
+		id:        this.id,
+		report:    newStateReport(herdUnitName, herdUnitVersion, Await),
+	}
 }
+
+func (this *herdUnitFactory[T]) ID() uuid.UUID { return this.id }
 
 type herdUnit[T core.Event] struct {
 	codesince uint
@@ -53,19 +58,31 @@ type herdUnit[T core.Event] struct {
 	registry  core.Registry[core.EventLog[T]]
 	tag       string
 	id        uuid.UUID
-	in        herdUnitInCfg
+	_         [24]byte
 	mu        sync.Mutex
 	report    report
 }
 
 func (u *herdUnit[T]) SetConfig(config []byte) error {
-	cfg := new(proto.HerdUnitConfig)
-	if err := protobuf.Unmarshal(config, cfg); err != nil {
-		return err
+	if len(config) < 2 || config[0] != 0x0A || config[1] > 127 {
+		return errInvalid
 	}
 
-	u.tag = cfg.Tag
-	u.in.config = config
+	n := int(config[1])
+	if n == 0 {
+		if len(config) == 2 {
+			u.tag = ""
+			return nil
+		}
+
+		return errInvalid
+	}
+
+	if len(config) != 2+n {
+		return errInvalid
+	}
+
+	u.tag = string(config[2:])
 	return nil
 }
 
@@ -171,12 +188,12 @@ sleep:
 }
 
 func (u *herdUnit[T]) state(code stateCode) {
-	u.codesince = (uint(code) << herdUnitSinceBit) | uint(kit.UnixNano())
+	u.codesince = newCodeSince(code)
 	u.report = newStateReport(herdUnitName, herdUnitVersion, code)
 }
 
 func (u *herdUnit[T]) fault(code errorCode, upstream error) {
-	u.codesince = (uint(Fault) << herdUnitSinceBit) | uint(kit.UnixNano())
+	u.codesince = newCodeSince(Fault)
 	u.report = newFaultReport(herdUnitName, herdUnitVersion, code, upstream)
 }
 
@@ -184,9 +201,9 @@ func (u *herdUnit[T]) getSourceReader() source.Reader[T] { return u.reader }
 func (u *herdUnit[T]) getSinkWriter() sink.Writer[T]     { return u.writer }
 
 func (u *herdUnit[T]) getEventLog() (core.EventLog[T], bool) {
-	log, err := u.registry.Get(u.herdUnitKey())
+	_, err := u.registry.Get(u.herdUnitKey())
 	if err != nil {
-		log = kit.NewLog[T](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
+		log := kit.NewLog[T](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
 		u.registry.Register(u.herdUnitKey(), log)
 		return log, true
 	}
@@ -226,7 +243,15 @@ func (u *herdUnit[T]) Pause() error    { return send(u.ctrl, pause) }
 func (u *herdUnit[T]) Resume() error   { return send(u.ctrl, resume) }
 func (u *herdUnit[T]) Restart() error  { return send(u.ctrl, restart) }
 func (u *herdUnit[T]) Tag() string     { return u.tag }
-func (u *herdUnit[T]) Config() []byte  { return u.in.config }
+
+func (u *herdUnit[T]) Config() []byte {
+	n := len(u.tag)
+	buf := make([]byte, 2+n)
+	buf[0] = 0x0A
+	buf[1] = byte(n)
+	copy(buf[2:], u.tag)
+	return buf
+}
 
 func (u *herdUnit[T]) Status() (int, int64) {
 	return int(u.codesince >> herdUnitSinceBit), int64(u.codesince & herdUnitSinceMask)
@@ -239,4 +264,8 @@ func (u *herdUnit[T]) Initialize(registry core.Registry[core.EventLog[T]]) error
 	u.registry = registry
 	u.state(Init)
 	return nil
+}
+
+func newCodeSince(code stateCode) uint {
+	return (uint(code) << herdUnitSinceBit) | uint(kit.UnixNano())
 }
