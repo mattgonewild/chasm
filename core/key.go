@@ -2,21 +2,29 @@ package core
 
 import "time"
 
-// Key encodes a symbol and an optional interval.
-//
-// The symbol must consist only of [ A-Z . - ] and be at most 10 characters long.
+// Key encodes an optional domain, symbol and optional interval.
 type Key = uint64
+
+const (
+	DomainMask = domainMask
+	SymIntBit  = symIntBit
+)
+
+const (
+	domainBit  uint64 = 3
+	domainMask uint64 = (1 << domainBit) - 1
+	symIntBit  uint64 = 64 - domainBit
+	bitPerCode uint64 = 5
+	codeMask   uint64 = (1 << bitPerCode) - 1
+	intBit     uint64 = 11
+	intMask    uint64 = (1 << intBit) - 1
+
+	intStep time.Duration = time.Minute
+)
 
 const (
 	alphaUsed string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-"
 	base      byte   = 1
-
-	bitPerCode uint64 = 5
-	codeMask   uint64 = (1 << bitPerCode) - 1
-
-	intBit  uint64        = 11
-	intMask uint64        = (1 << intBit) - 1
-	intStep time.Duration = time.Minute
 )
 
 var (
@@ -50,10 +58,9 @@ func newReverse() [32]byte {
 	return reverse
 }
 
-// EncodeSymbolKey encodes a symbol into a Key.
-//
 // The symbol must consist only of [ A-Z . - ] and be at most 10 characters long.
-func EncodeSymbolKey(symbol string) Key {
+// Domain defaults to Symbol.
+func NewKey(symbol string) Key {
 	var (
 		sink   uint64
 		length = uint64(len(symbol))
@@ -63,15 +70,27 @@ func EncodeSymbolKey(symbol string) Key {
 		sink |= uint64(lookup[symbol[index]]) << (index * bitPerCode)
 	}
 
-	return Key(sink)
+	return sink << intBit
 }
 
-// DecodeSymbolKey decodes a Key back to its symbol.
-func DecodeSymbolKey(key Key) string {
+// NewDomainKey should only be used with Keys created by NewKey.
+func NewDomainKey(domain Domain, key Key) Key { return (uint64(domain) << symIntBit) | key }
+
+// NewCandleKey should only be used with Keys created by NewKey.
+// The minute count must be greater than zero and less than 2048. Domain is set to Candle.
+func NewCandleKey(key Key, minute int64) Key {
+	return (uint64(Candle) << symIntBit) | (key | uint64(minute))
+}
+
+// Decode a Key's domain. Keys without a domain set will report as Symbol.
+func DecodeDomain(key Key) Domain { return Domain((key >> symIntBit) & domainMask) }
+
+// Decode a Key's symbol.
+func DecodeSymbol(key Key) string {
 	var (
 		buf [10]byte
 		n   int
-		k   = uint64(key)
+		k   = key >> intBit
 	)
 
 	for index := range buf {
@@ -88,63 +107,12 @@ func DecodeSymbolKey(key Key) string {
 	return string(buf[:n])
 }
 
-// PromoteSymbolKey promotes a symbol Key to a candle Key by appending a minute count.
-// The count must be greater than zero and less than 2048.
-func PromoteSymbolKey(key Key, minute int64) Key { return Key((key << intBit) | uint64(minute)) }
+// Decode a Key's interval.
+func DecodeInterval(key Key) time.Duration { return time.Duration((key & intMask)) * intStep }
 
-// EncodeCandleKey encodes a symbol and interval into a Key.
-//
-// The symbol must consist only of [ A-Z . - ] and be at most 10 characters long,
-// while interval should be no greater than a day.
-func EncodeCandleKey(symbol string, interval time.Duration) Key {
-	var (
-		sink   uint64
-		length = uint64(len(symbol))
-	)
-
-	for index := range length {
-		sink |= uint64(lookup[symbol[index]]) << (index * bitPerCode)
-	}
-
-	return Key((sink << intBit) | uint64(interval/intStep))
-}
-
-// DecodeCandleKey decodes a Key back to its symbol and interval.
-func DecodeCandleKey(key Key) (string, time.Duration) {
-	var (
-		buf [10]byte
-		n   int
-		k   = uint64(key) >> intBit
-	)
-
-	for index := range buf {
-		code := k & codeMask
-		if code == 0 {
-			break
-		}
-
-		buf[index] = reverse[code]
-		n++
-		k >>= bitPerCode
-	}
-
-	return string(buf[:n]), time.Duration((uint64(key) & intMask)) * intStep
-}
-
-// OkInterval validates that a duration given in nanoseconds is acceptable for use in a Key.
-// It must be a positive multiple of one minute (not zero) and no greater than 2047 minutes.
-func OkInterval(duration int64) bool {
-	const (
-		step = int64(intStep)
-		max  = int64(intMask) * step
-	)
-
-	return (duration >= step) && (duration <= max) && (duration%step == 0)
-}
-
-// OkIntervalMinute validates that a duration given in minutes is acceptable for use in a Key.
-// It must be greater than zero and less than 2048.
-func OkIntervalMinute(minute int64) bool {
+// OkInterval validates that a duration given in minutes is acceptable for use in a Key.
+// The minute count must be greater than zero and less than 2048.
+func OkInterval(minute int64) bool {
 	const (
 		min int64 = 1
 		max int64 = int64(intMask)

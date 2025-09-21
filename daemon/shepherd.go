@@ -367,10 +367,10 @@ func (s *shepherd) syncInConfig() {
 	newInt, delInt, newIntLen, delIntLen := s.diffInterval()
 
 	for _, key := range ignored {
-		s.killBook(key)
-		s.killTrade(key)
+		s.kill(s.bookKey(key))
+		s.kill(s.tradeKey(key))
 		for _, value := range s.interval[:s.iLen] {
-			s.killCandle(key, value)
+			s.kill(s.candleKey(key, value))
 		}
 	}
 
@@ -382,7 +382,7 @@ func (s *shepherd) syncInConfig() {
 			}
 
 			for _, value := range delInt[:delIntLen] {
-				s.killCandle(key, value)
+				s.kill(s.candleKey(key, value))
 			}
 		}
 	}
@@ -394,10 +394,10 @@ func (s *shepherd) syncInConfig() {
 	spawned := make(map[core.Key]bool, len(visible))
 	for _, key := range visible {
 		spawned[key] = true
-		s.spawnBook(key)
-		s.spawnTrade(key)
+		s.addBook(s.bookKey(key))
+		s.addTrade(s.tradeKey(key))
 		for _, value := range s.interval[:s.iLen] {
-			s.spawnCandle(key, value)
+			s.addCandle(s.candleKey(key, value))
 		}
 	}
 
@@ -409,7 +409,7 @@ func (s *shepherd) syncInConfig() {
 			}
 
 			for _, value := range newInt[:newIntLen] {
-				s.spawnCandle(key, value)
+				s.addCandle(s.candleKey(key, value))
 			}
 		}
 	}
@@ -478,22 +478,16 @@ func (s *shepherd) diffInterval() (in, out [shepIntCap]int16, inLen, outLen uint
 	return added, subtracted, addLen, subLen
 }
 
-func (s *shepherd) killBook(key core.Key)                  { s.kill(s.spawnID(core.Book, key)) }
-func (s *shepherd) killTrade(key core.Key)                 { s.kill(s.spawnID(core.Trade, key)) }
-func (s *shepherd) killCandle(key core.Key, minute int16)  { s.kill(s.candleSpawnID(key, minute)) }
-func (s *shepherd) spawnBook(key core.Key)                 { s.addBook(s.spawnID(core.Book, key)) }
-func (s *shepherd) spawnTrade(key core.Key)                { s.addTrade(s.spawnID(core.Trade, key)) }
-func (s *shepherd) spawnCandle(key core.Key, minute int16) { s.addCandle(s.candleSpawnID(key, minute)) }
-func (s *shepherd) handleOnline(key core.Key)              { s.forEach(key, s.start) }
-func (s *shepherd) handleOffline(key core.Key)             { s.forEach(key, s.pause) }
+func (s *shepherd) handleOnline(key core.Key)  { s.forEach(key, s.start) }
+func (s *shepherd) handleOffline(key core.Key) { s.forEach(key, s.pause) }
 
-func (s *shepherd) forEach(key core.Key, yield func(uuid.UUID) error) {
+func (s *shepherd) forEach(key core.Key, yield func(core.Key) error) {
 	if s.ignore[key] {
 		return
 	}
 
-	yield(s.spawnID(core.Book, key))
-	yield(s.spawnID(core.Trade, key))
+	yield(s.bookKey(key))
+	yield(s.tradeKey(key))
 
 	var (
 		interval = s.interval
@@ -501,48 +495,61 @@ func (s *shepherd) forEach(key core.Key, yield func(uuid.UUID) error) {
 	)
 
 	for _, value := range interval[:iLen] {
-		yield(s.candleSpawnID(key, value))
+		yield(s.candleKey(key, value))
 	}
 }
 
-func (s *shepherd) candleSpawnID(key core.Key, minute int16) uuid.UUID {
-	key = core.PromoteSymbolKey(key, int64(minute))
-	return s.spawnID(core.Candle, key)
+func (s *shepherd) bookKey(key core.Key) core.Key { return core.NewDomainKey(core.Book, key) }
+
+func (s *shepherd) candleKey(key core.Key, interval int16) core.Key {
+	return core.NewCandleKey(key, int64(interval))
 }
 
-func (s *shepherd) spawnID(domain core.Domain, key core.Key) uuid.UUID {
-	return spawnID(s.id, domain, key)
-}
+func (s *shepherd) tradeKey(key core.Key) core.Key { return core.NewDomainKey(core.Trade, key) }
 
-func (s *shepherd) start(id uuid.UUID) error {
-	if s.resume(id) == nil {
+func (s *shepherd) start(key core.Key) error {
+	if s.resume(key) == nil {
 		return nil
 	}
 
-	switch core.Domain(binary.BigEndian.Uint64(id[:8]) & 0x0FFF) {
+	switch core.Domain((key >> core.SymIntBit) & core.DomainMask) {
 	case core.Book:
-		return s.addBook(id)
+		return s.addBook(key)
 	case core.Candle:
-		return s.addCandle(id)
+		return s.addCandle(key)
 	case core.Trade:
-		return s.addTrade(id)
+		return s.addTrade(key)
 	default:
 		return errInvalid
 	}
 }
 
-func (s *shepherd) pause(id uuid.UUID) error     { return s.linker.PauseID(id) }
-func (s *shepherd) resume(id uuid.UUID) error    { return s.linker.ResumeID(id) }
-func (s *shepherd) kill(id uuid.UUID) error      { return s.linker.Kill(id) }
-func (s *shepherd) addBook(id uuid.UUID) error   { return s.linker.AddBook(s.newBookFactory(id)) }
-func (s *shepherd) addCandle(id uuid.UUID) error { return s.linker.AddCandle(s.newCandleFactory(id)) }
-func (s *shepherd) addTrade(id uuid.UUID) error  { return s.linker.AddTrade(s.newTradeFactory(id)) }
+func (s *shepherd) pause(key core.Key) error     { return s.linker.PauseID(s.sid(key)) }
+func (s *shepherd) resume(key core.Key) error    { return s.linker.ResumeID(s.sid(key)) }
+func (s *shepherd) kill(key core.Key) error      { return s.linker.Kill(s.sid(key)) }
+func (s *shepherd) addBook(key core.Key) error   { return s.linker.AddBook(s.newBookFactory(key)) }
+func (s *shepherd) addCandle(key core.Key) error { return s.linker.AddCandle(s.newCandleFactory(key)) }
+func (s *shepherd) addTrade(key core.Key) error  { return s.linker.AddTrade(s.newTradeFactory(key)) }
 
-func (s *shepherd) newBookFactory(id uuid.UUID) core.BookFactory
+func (s *shepherd) newBookFactory(key core.Key) core.BookFactory
+func (s *shepherd) newCandleFactory(key core.Key) core.CandleFactory
+func (s *shepherd) newTradeFactory(key core.Key) core.TradeFactory
 
-func (s *shepherd) newCandleFactory(id uuid.UUID) core.CandleFactory
+func (s *shepherd) sid(key core.Key) uuid.UUID {
+	msb := binary.BigEndian.Uint64(s.id[:8])
+	msb &= ^uint64((1 << 16) - 1)
+	msb |= uint64(0x8) << 12
+	msb |= uint64((key >> core.SymIntBit) & core.DomainMask)
 
-func (s *shepherd) newTradeFactory(id uuid.UUID) core.TradeFactory
+	lsb := uint64(key)
+	lsb &^= uint64(3) << 62
+	lsb |= uint64(2) << 62
+
+	id := uuid.Nil
+	binary.BigEndian.PutUint64(id[:8], msb)
+	binary.BigEndian.PutUint64(id[8:], lsb)
+	return id
+}
 
 func (s *shepherd) Shutdown() error      { return send(s.ctrl, shutdown) }
 func (s *shepherd) Pause() error         { return send(s.ctrl, pause) }
@@ -565,4 +572,4 @@ func (s *shepherd) WithLinker(linker core.Linker) core.SymbolDaemon {
 	return s
 }
 
-func okInterval(minute int64) bool { return core.OkIntervalMinute(minute) }
+func okInterval(minute int64) bool { return core.OkInterval(minute) }

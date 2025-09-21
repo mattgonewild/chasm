@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"encoding/binary"
 	"sync"
 
 	"github.com/google/uuid"
@@ -19,6 +20,26 @@ const (
 	herdUnitSinceBit  uint   = 64 - herdUnitCodeBit
 	herdUnitSinceMask uint   = (1 << herdUnitSinceBit) - 1
 )
+
+type herdUnitFactory[T core.Event] struct {
+	id     uuid.UUID
+	tag    string
+	reader source.Reader[T]
+	writer sink.Writer[T]
+}
+
+func NewHerdUnitFactory[T core.Event](id uuid.UUID, tag string, reader source.Reader[T], writer sink.Writer[T],
+) core.Factory[core.Producer[core.EventLog[T]]] {
+	return &herdUnitFactory[T]{
+		id:     id,
+		tag:    tag,
+		reader: reader,
+		writer: writer,
+	}
+}
+
+func (this *herdUnitFactory[T]) New() core.Producer[core.EventLog[T]] { return nil }
+func (this *herdUnitFactory[T]) ID() uuid.UUID                        { return this.id }
 
 type herdUnitInCfg struct {
 	config []byte
@@ -183,7 +204,14 @@ func (u *herdUnit[T]) freeEventLog(ourLog *bool) {
 	}
 }
 
-func (u *herdUnit[T]) herdUnitKey() core.Key      { return spawnIdKey(u.id) }
+func (u *herdUnit[T]) herdUnitKey() core.Key {
+	msb := binary.BigEndian.Uint64(u.id[:8])
+	lsb := binary.BigEndian.Uint64(u.id[8:])
+	domain := msb & ((1 << 3) - 1)
+	symInt := lsb & ((1 << 61) - 1)
+	return (domain << 61) | symInt
+}
+
 func (u *herdUnit[T]) awkOk(cmd pack)             { kit.Close(cmd.awk) }
 func (u *herdUnit[T]) awkErr(cmd pack, err error) { cmd.awk <- err; kit.Close(cmd.awk) }
 
