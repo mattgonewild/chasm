@@ -4,6 +4,7 @@ import "math"
 
 type Event interface {
 	SymbolEvent | BookEvent | CandleEvent | TradeEvent
+	UnixTimestamped
 }
 
 type SymbolEvent struct {

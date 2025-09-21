@@ -3,7 +3,6 @@ package daemon
 import (
 	"encoding/binary"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/mattgonewild/chasm/core"
@@ -15,13 +14,10 @@ import (
 )
 
 const (
-	shepName                string        = "TODO"
-	shepVersion             string        = "TODO"
-	shepIntCap              uint8         = 10
-	shepKey                 core.Key      = 0
-	shepLogStepWindow       time.Duration = 0
-	shepLogRetention        time.Duration = 0
-	shepLogCapPerLinkedNode int           = 0
+	shepName    string   = "shepherd"
+	shepVersion string   = "TODO"
+	shepIntCap  uint8    = 10
+	shepKey     core.Key = 0
 )
 
 type ShepherdConfig struct {
@@ -335,7 +331,7 @@ func (s *shepherd) getSinkWriter() sink.Writer[core.SymbolEvent]     { return s.
 func (s *shepherd) getEventLog() (core.EventLog[core.SymbolEvent], bool) {
 	log, err := s.registry.Get(shepKey)
 	if err != nil {
-		log = kit.NewLog[core.SymbolEvent](shepLogStepWindow, shepLogRetention, shepLogCapPerLinkedNode)
+		log = kit.NewLog[core.SymbolEvent](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
 		s.registry.Register(shepKey, log)
 		return log, true
 	}
@@ -343,14 +339,14 @@ func (s *shepherd) getEventLog() (core.EventLog[core.SymbolEvent], bool) {
 	return s.claimEventLog()
 }
 
+func (s *shepherd) claimEventLog() (core.EventLog[core.SymbolEvent], bool) {
+	return s.registry.Claim(shepKey)
+}
+
 func (s *shepherd) freeEventLog(ourLog *bool) {
 	if *ourLog {
 		s.registry.Release(shepKey)
 	}
-}
-
-func (s *shepherd) claimEventLog() (core.EventLog[core.SymbolEvent], bool) {
-	return s.registry.Claim(shepKey)
 }
 
 func (s *shepherd) awkOk(cmd pack)             { kit.Close(cmd.awk) }
@@ -515,18 +511,7 @@ func (s *shepherd) candleSpawnID(key core.Key, minute int16) uuid.UUID {
 }
 
 func (s *shepherd) spawnID(domain core.Domain, key core.Key) uuid.UUID {
-	msb := binary.LittleEndian.Uint64(s.id[:8])
-	msb &= ^uint64(0xFFFF)
-	msb |= uint64(0x8) << 12
-	msb |= uint64(domain)
-
-	lsb := uint64(key)
-	lsb |= uint64(2) << 62
-
-	id := uuid.Nil
-	binary.BigEndian.PutUint64(id[:8], msb)
-	binary.BigEndian.PutUint64(id[8:], lsb)
-	return id
+	return spawnID(s.id, domain, key)
 }
 
 func (s *shepherd) start(id uuid.UUID) error {
@@ -555,11 +540,7 @@ func (s *shepherd) addTrade(id uuid.UUID) error  { return s.linker.AddTrade(s.ne
 
 func (s *shepherd) newBookFactory(id uuid.UUID) core.BookFactory
 
-func (s *shepherd) newCandleFactory(id uuid.UUID) core.CandleFactory {
-	// key := core.Key(binary.BigEndian.Uint64(id[8:]) &^ (3 << 62))
-	// _, interval := core.DecodeCandleKey(key)
-	return nil
-}
+func (s *shepherd) newCandleFactory(id uuid.UUID) core.CandleFactory
 
 func (s *shepherd) newTradeFactory(id uuid.UUID) core.TradeFactory
 

@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/mattgonewild/chasm/daemon/proto;proto";
+
+message HerdUnitConfig {
+    string tag = 1;
+}
