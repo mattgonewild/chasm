@@ -26,7 +26,7 @@ type (
 	Reader[T core.Event] interface {
 		Open() error
 		Close() error
-		Read() T
+		Read() (T, bool)
 		Next() error
 	}
 
@@ -34,7 +34,11 @@ type (
 		Endpoint() string
 		Subscribe(key core.Key) []byte
 		Unsubscribe(key core.Key) []byte
-		Decode(frame []byte) (T, error)
+		EventDecoder[T]
+	}
+
+	EventDecoder[T core.Event] interface {
+		Feed(frame []byte) (T, bool, error)
 	}
 
 	KeyGetter interface {
@@ -93,6 +97,7 @@ type bufWebSockReader[T core.Event] struct {
 	conn    *tls.Conn
 	proto   Proto[T]
 	decoded T
+	ok      bool
 	buf     [8192]byte
 	mask    uint32
 	key     core.Key
@@ -259,7 +264,7 @@ func (this *bufWebSockReader[T]) writeCloseFrame() {
 	this.conn.Write(buf[:])
 }
 
-func (this *bufWebSockReader[T]) Read() T { return this.decoded }
+func (this *bufWebSockReader[T]) Read() (T, bool) { return this.decoded, this.ok }
 
 func (this *bufWebSockReader[T]) Next() error {
 	length := this.bufferTextFrame()
@@ -267,12 +272,13 @@ func (this *bufWebSockReader[T]) Next() error {
 		return ErrBadRead
 	}
 
-	decoded, err := this.proto.Decode(this.buf[:length])
+	decoded, ok, err := this.proto.Feed(this.buf[:length])
 	if err != nil {
 		return err
 	}
 
 	this.decoded = decoded
+	this.ok = ok
 	return nil
 }
 

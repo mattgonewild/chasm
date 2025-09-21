@@ -262,7 +262,11 @@ active:
 				return
 			}
 
-			event := reader.Read()
+			event, ok := reader.Read()
+			if !ok {
+				continue
+			}
+
 			if event.Online {
 				s.handleOnline(event.Symbol)
 			} else {
@@ -329,9 +333,9 @@ func (s *shepherd) getSourceReader() source.Reader[core.SymbolEvent] { return s.
 func (s *shepherd) getSinkWriter() sink.Writer[core.SymbolEvent]     { return s.sink.Symbol(shepKey) }
 
 func (s *shepherd) getEventLog() (core.EventLog[core.SymbolEvent], bool) {
-	log, err := s.registry.Get(shepKey)
+	_, err := s.registry.Get(shepKey)
 	if err != nil {
-		log = kit.NewLog[core.SymbolEvent](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
+		log := kit.NewLog[core.SymbolEvent](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
 		s.registry.Register(shepKey, log)
 		return log, true
 	}
@@ -531,9 +535,17 @@ func (s *shepherd) addBook(key core.Key) error   { return s.linker.AddBook(s.new
 func (s *shepherd) addCandle(key core.Key) error { return s.linker.AddCandle(s.newCandleFactory(key)) }
 func (s *shepherd) addTrade(key core.Key) error  { return s.linker.AddTrade(s.newTradeFactory(key)) }
 
-func (s *shepherd) newBookFactory(key core.Key) core.BookFactory
-func (s *shepherd) newCandleFactory(key core.Key) core.CandleFactory
-func (s *shepherd) newTradeFactory(key core.Key) core.TradeFactory
+func (s *shepherd) newBookFactory(key core.Key) core.BookFactory {
+	return newHerdUnitFactory(s.source.Book(key), s.sink.Book(key), core.DecodeSymbol(key), s.sid(key))
+}
+
+func (s *shepherd) newCandleFactory(key core.Key) core.CandleFactory {
+	return newHerdUnitFactory(s.source.Candle(key), s.sink.Candle(key), core.DecodeSymbol(key), s.sid(key))
+}
+
+func (s *shepherd) newTradeFactory(key core.Key) core.TradeFactory {
+	return newHerdUnitFactory(s.source.Trade(key), s.sink.Trade(key), core.DecodeSymbol(key), s.sid(key))
+}
 
 func (s *shepherd) sid(key core.Key) uuid.UUID {
 	msb := binary.BigEndian.Uint64(s.id[:8])

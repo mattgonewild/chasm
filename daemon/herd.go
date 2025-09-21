@@ -146,7 +146,11 @@ active:
 				return
 			}
 
-			event := reader.Read()
+			event, ok := reader.Read()
+			if !ok {
+				continue
+			}
+
 			if !ourLog {
 				if log, ourLog = u.claimEventLog(); !ourLog {
 					goto sink
