@@ -67,7 +67,7 @@ func NewSource(
 		book:   book,
 		trade:  trade,
 		candle: candle,
-		demux:  make(map[core.Key]*candleDemux),
+		demux:  make(map[core.Key]*candleDemux, 512),
 		getter: getter,
 	}
 }
@@ -80,7 +80,7 @@ func (s *source) Book(key core.Key) Reader[core.BookEvent] {
 	return newBookReader(s.origin, s.book, key)
 }
 
-func (s *source) Candle(key core.Key) Reader[core.CandleEvent] {
+func (s *source) Candle(key core.Key) Reader[core.CandleEvent] { // TODO: demuxers are never dereferenced
 	symbol := core.NewKey(core.DecodeSymbol(key))
 
 	if demux, ok := s.demux[symbol]; ok {
