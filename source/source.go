@@ -1,14 +1,9 @@
 package source
 
 import (
-	"crypto/rand"
-	"crypto/tls"
-	"encoding/base64"
-	"encoding/binary"
-	"errors"
 	"io"
 	"net/http"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/mattgonewild/chasm/core"
@@ -38,7 +33,7 @@ type (
 	}
 
 	EventDecoder[T core.Event] interface {
-		Feed(frame []byte) (T, bool, error)
+		Feed(key core.Key, frame []byte) (T, bool, error)
 	}
 
 	KeyGetter interface {
@@ -49,398 +44,315 @@ type (
 )
 
 type source struct {
+	origin string
 	symbol Proto[core.SymbolEvent]
 	book   Proto[core.BookEvent]
-	candle Proto[core.CandleEvent]
 	trade  Proto[core.TradeEvent]
-	origin string
+	candle Proto[core.CandleEvent]
+	demux  map[core.Key]*candleDemux
 	getter KeyGetter
 }
 
 func NewSource(
+	origin string,
 	symbol Proto[core.SymbolEvent],
 	book Proto[core.BookEvent],
-	candle Proto[core.CandleEvent],
 	trade Proto[core.TradeEvent],
-	origin string,
+	candle Proto[core.CandleEvent],
 	getter KeyGetter,
 ) Source {
 	return &source{
+		origin: origin,
 		symbol: symbol,
 		book:   book,
-		candle: candle,
 		trade:  trade,
-		origin: origin,
+		candle: candle,
+		demux:  make(map[core.Key]*candleDemux),
 		getter: getter,
 	}
 }
 
-func (this *source) Symbol(key core.Key) Reader[core.SymbolEvent] {
-	return newBufWebSockReader(this.origin, this.symbol, key)
+func (s *source) Symbol(key core.Key) Reader[core.SymbolEvent] {
+	return newSymbolReader(s.origin, s.symbol, key)
 }
 
-func (this *source) Book(key core.Key) Reader[core.BookEvent] {
-	return newBufWebSockReader(this.origin, this.book, key)
+func (s *source) Book(key core.Key) Reader[core.BookEvent] {
+	return newBookReader(s.origin, s.book, key)
 }
 
-func (this *source) Candle(key core.Key) Reader[core.CandleEvent] {
-	return newBufWebSockReader(this.origin, this.candle, key)
+func (s *source) Candle(key core.Key) Reader[core.CandleEvent] {
+	symbol := core.NewKey(core.DecodeSymbol(key))
+
+	if demux, ok := s.demux[symbol]; ok {
+		return newCandleReader(demux, key)
+	}
+
+	demux := newCandleDemux(s.origin, s.candle)
+	s.demux[symbol] = demux
+	return newCandleReader(demux, key)
 }
 
-func (this *source) Trade(key core.Key) Reader[core.TradeEvent] {
-	return newBufWebSockReader(this.origin, this.trade, key)
+func (s *source) Trade(key core.Key) Reader[core.TradeEvent] {
+	return newTradeReader(s.origin, s.trade, key)
 }
 
-func (this *source) Get() KeyGetter { return this.getter }
+func (s *source) Get() KeyGetter { return s.getter }
 
-type bufWebSockReader[T core.Event] struct {
-	conn    *tls.Conn
-	proto   Proto[T]
-	decoded T
+type symbolReader struct {
+	proto   Proto[core.SymbolEvent]
+	decoded core.SymbolEvent
 	ok      bool
-	buf     [8192]byte
-	mask    uint32
 	key     core.Key
+	socket  tcp4WebSocket
 	origin  string
 }
 
-var (
-	ErrBadUpgrade = errors.New("matt::chasm::source: bad upgrade")
-	ErrBadRead    = errors.New("matt::chasm::source: bad read")
-)
-
-func newBufWebSockReader[T core.Event](origin string, proto Proto[T], key core.Key) Reader[T] {
-	return &bufWebSockReader[T]{
+func newSymbolReader(origin string, proto Proto[core.SymbolEvent], key core.Key) *symbolReader {
+	return &symbolReader{
 		proto:  proto,
 		key:    key,
 		origin: origin,
 	}
 }
 
-func (this *bufWebSockReader[T]) Open() error {
-	conn, err := tls.Dial("tcp4", this.origin, nil)
-	if err != nil {
-		return err
-	}
-
-	var (
-		buf [512]byte
-		n   int
-
-		as = func(s string) { n += copy(buf[n:], s) }
-		ab = func(b []byte) { n += copy(buf[n:], b) }
-	)
-
-	const lineEnd string = "\r\n"
-
-	as("GET ")
-	as(this.proto.Endpoint())
-	as(" HTTP/1.1")
-	as(lineEnd)
-
-	as("Host: ")
-	as(this.origin)
-	as(lineEnd)
-
-	as("Upgrade: websocket")
-	as(lineEnd)
-
-	as("Connection: Upgrade")
-	as(lineEnd)
-
-	var (
-		raw [16]byte
-		b64 [24]byte
-	)
-
-	rand.Read(raw[:])
-	base64.StdEncoding.Encode(b64[:], raw[:])
-
-	as("Sec-WebSocket-Key: ")
-	ab(b64[:])
-	as(lineEnd)
-
-	as("Sec-WebSocket-Version: 13")
-	as(lineEnd)
-
-	as(lineEnd)
-
-	_, err = conn.Write(buf[:n])
-	if err != nil {
-		conn.Close()
-		return err
-	}
-
-	var (
-		ruf  [512]byte
-		r    int
-		step int = 1
-		end  int = len(ruf) - step
-	)
-
-	for r < end {
-		n, err := conn.Read(ruf[r : r+step])
-		if err != nil {
-			return err
-		}
-
-		r += n
-		if r >= 4 && ruf[r-4] == '\r' && ruf[r-3] == '\n' && ruf[r-2] == '\r' && ruf[r-1] == '\n' {
-			break
-		}
-	}
-
-	if !strings.Contains(string(ruf[:r]), " 101 ") {
-		conn.Close()
-		return ErrBadUpgrade
-	}
-
-	this.conn = conn
-	this.mask = binary.LittleEndian.Uint32(raw[:4])
-	this.writeTextFrame(this.proto.Subscribe(this.key))
-	return nil
+func (r *symbolReader) Open() error {
+	return open(&r.socket, r.origin, r.proto.Endpoint(), r.proto.Subscribe(r.key))
 }
 
-func (this *bufWebSockReader[T]) Close() error {
-	this.writeTextFrame(this.proto.Unsubscribe(this.key))
-	this.writeCloseFrame()
-	return this.conn.Close()
-}
+func (r *symbolReader) Close() error                   { return close(&r.socket, r.proto.Unsubscribe(r.key)) }
+func (r *symbolReader) Read() (core.SymbolEvent, bool) { return r.decoded, r.ok }
 
-func (this *bufWebSockReader[T]) writeTextFrame(data []byte) {
-	var buf [8 + 4096]byte
-	buf[0] = 0x80 | 1
-	buf[1] = 0x80 | 126
-
-	var length = len(data)
-	buf[2] = byte(length >> 8)
-	buf[3] = byte(length)
-
-	var mask = this.mask
-	mask ^= mask << 13
-	mask ^= mask >> 17
-	mask ^= mask << 5
-	if mask == 0 {
-		mask = 1
-	}
-	this.mask = mask
-
-	buf[4] = byte(mask)
-	buf[5] = byte(mask >> 8)
-	buf[6] = byte(mask >> 16)
-	buf[7] = byte(mask >> 24)
-
-	for index := range length {
-		buf[8+index] = data[index] ^ buf[4+(index&3)]
-	}
-
-	this.conn.Write(buf[:8+length])
-}
-
-func (this *bufWebSockReader[T]) writeCloseFrame() {
-	var buf [8]byte
-	buf[0] = 0x80 | 8
-	buf[1] = 0x80 | 2
-
-	var mask = this.mask
-	mask ^= mask << 13
-	mask ^= mask >> 17
-	mask ^= mask << 5
-	if mask == 0 {
-		mask = 1
-	}
-	this.mask = mask
-
-	buf[2] = byte(mask)
-	buf[3] = byte(mask >> 8)
-	buf[4] = byte(mask >> 16)
-	buf[5] = byte(mask >> 24)
-
-	const closeNormal uint16 = 1000
-	high, low := closeNormal>>8, closeNormal
-	buf[6] = byte(high) ^ buf[2]
-	buf[7] = byte(low) ^ buf[3]
-
-	this.conn.Write(buf[:])
-}
-
-func (this *bufWebSockReader[T]) Read() (T, bool) { return this.decoded, this.ok }
-
-func (this *bufWebSockReader[T]) Next() error {
-	length := this.bufferTextFrame()
+func (r *symbolReader) Next() error {
+	length := r.socket.bufferTextFrame()
 	if length < 0 {
 		return ErrBadRead
 	}
 
-	decoded, ok, err := this.proto.Feed(this.buf[:length])
+	decoded, ok, err := r.proto.Feed(r.key, r.socket.buf[:length])
 	if err != nil {
 		return err
 	}
 
-	this.decoded = decoded
-	this.ok = ok
+	r.decoded = decoded
+	r.ok = ok
 	return nil
 }
 
-func (this *bufWebSockReader[T]) bufferTextFrame() int {
-	const (
-		fmask byte = 0x80
-		omask byte = 0x0F
-		hmask byte = 0x7F
-		text  byte = 0x1
-		cont  byte = 0x0
-		ping  byte = 0x9
-		pong  byte = 0xA
-	)
-	var length int
-start:
-	var (
-		hdr [2]byte
-		off int
-	)
+type bookReader struct {
+	proto   Proto[core.BookEvent]
+	decoded core.BookEvent
+	ok      bool
+	key     core.Key
+	_       [16]byte
+	socket  tcp4WebSocket
+	origin  string
+}
 
-	for off < 2 {
-		n, err := this.conn.Read(hdr[off:])
-		if err != nil {
-			return -1
-		}
+func newBookReader(origin string, proto Proto[core.BookEvent], key core.Key) *bookReader {
+	return &bookReader{
+		proto:  proto,
+		key:    key,
+		origin: origin,
+	}
+}
 
-		off += n
+func (r *bookReader) Open() error {
+	return open(&r.socket, r.origin, r.proto.Endpoint(), r.proto.Subscribe(r.key))
+}
+
+func (r *bookReader) Close() error                 { return close(&r.socket, r.proto.Unsubscribe(r.key)) }
+func (r *bookReader) Read() (core.BookEvent, bool) { return r.decoded, r.ok }
+
+func (r *bookReader) Next() error {
+	length := r.socket.bufferTextFrame()
+	if length < 0 {
+		return ErrBadRead
 	}
 
-	var (
-		final = (hdr[0] & fmask) != 0
-		op    = (hdr[0] & omask)
-		hint  = int(hdr[1] & hmask)
-	)
-
-	switch op {
-	case text:
-	case cont:
-	case ping:
-		var buf [6 + 125]byte
-		buf[0] = 0x80 | 10
-		buf[1] = 0x80 | byte(hint)
-
-		var mask = this.mask
-		mask ^= mask << 13
-		mask ^= mask >> 17
-		mask ^= mask << 5
-		if mask == 0 {
-			mask = 1
-		}
-		this.mask = mask
-
-		buf[2] = byte(mask)
-		buf[3] = byte(mask >> 8)
-		buf[4] = byte(mask >> 16)
-		buf[5] = byte(mask >> 24)
-
-		var (
-			data [125]byte
-			off  int
-		)
-
-		for off < hint {
-			n, err := this.conn.Read(data[off:hint])
-			if err != nil {
-				return -1
-			}
-
-			off += n
-		}
-
-		for index := range hint {
-			buf[6+index] = data[index] ^ buf[2+(index&3)]
-		}
-
-		if _, err := this.conn.Write(buf[:6+hint]); err != nil {
-			return -1
-		}
-
-		goto start
-	case pong:
-		var buf [125]byte
-		for hint > 0 {
-			n, err := this.conn.Read(buf[:hint])
-			if err != nil {
-				return -1
-			}
-
-			hint -= n
-		}
-
-		goto start
-	default:
-		return -1
+	decoded, ok, err := r.proto.Feed(r.key, r.socket.buf[:length])
+	if err != nil {
+		return err
 	}
 
-	switch hint {
-	case 126:
-		var (
-			ext [2]byte
-			off int
-		)
+	r.decoded = decoded
+	r.ok = ok
+	return nil
+}
 
-		for off < 2 {
-			n, err := this.conn.Read(ext[off:])
-			if err != nil {
-				return -1
-			}
+type candleDemux struct {
+	socket tcp4WebSocket
 
-			off += n
-		}
+	read, total int8
+	length      int16
 
-		var plen = int(binary.BigEndian.Uint16(ext[:]))
-		if (length + plen) > len(this.buf) {
-			return -1
-		}
+	origin string
+	proto  Proto[core.CandleEvent]
+	mu     sync.Mutex
+	cond   *sync.Cond
+}
 
-		dst := this.buf[length : length+plen]
-		off = 0
-		for off < plen {
-			n, err := this.conn.Read(dst[off:])
-			if err != nil {
-				return -1
-			}
-
-			off += n
-		}
-
-		length += plen
-		if !final {
-			goto start
-		}
-
-		return length
-	case 127:
-		return -1
-	default:
-		if (length + hint) > len(this.buf) {
-			return -1
-		}
-
-		var (
-			dst = this.buf[length : length+hint]
-			off int
-		)
-
-		for off < hint {
-			n, err := this.conn.Read(dst[off:])
-			if err != nil {
-				return -1
-			}
-
-			off += n
-		}
-
-		length += hint
-		if !final {
-			goto start
-		}
-
-		return length
+func newCandleDemux(origin string, proto Proto[core.CandleEvent]) *candleDemux {
+	demux := &candleDemux{
+		origin: origin,
+		proto:  proto,
 	}
+
+	demux.cond = sync.NewCond(&demux.mu)
+	return demux
+}
+
+func (d *candleDemux) open(key core.Key) error {
+	d.mu.Lock()
+	if d.total == 0 {
+		if err := open(&d.socket, d.origin, d.proto.Endpoint(), d.proto.Subscribe(key)); err != nil {
+			d.proto.Unsubscribe(key)
+			d.mu.Unlock()
+			return err
+		}
+
+		d.total++
+		d.mu.Unlock()
+		return nil
+	}
+
+	d.total++
+	d.read++
+
+	d.proto.Subscribe(key)
+	d.mu.Unlock()
+	return nil
+}
+
+func (d *candleDemux) close(key core.Key) error {
+	d.mu.Lock()
+	if d.total == 1 {
+		d.total--
+		err := close(&d.socket, d.proto.Unsubscribe(key))
+		d.mu.Unlock()
+		return err
+	}
+
+	d.total--
+	d.proto.Unsubscribe(key)
+	d.mu.Unlock()
+	return nil
+}
+
+func (d *candleDemux) next(reader *candleReader) (err error) {
+	d.mu.Lock()
+	if d.read == d.total {
+		d.read = 0
+		d.mu.Unlock()
+
+		length := d.socket.bufferTextFrame()
+		if length < 0 {
+			d.mu.Lock()
+			d.read++
+			d.length = -1
+			d.mu.Unlock()
+			d.cond.Broadcast()
+			return ErrBadRead
+		}
+
+		reader.decoded, reader.ok, err =
+			d.proto.Feed(reader.key, d.socket.buf[:length])
+
+		d.mu.Lock()
+		d.read++
+		d.length = int16(length)
+		d.mu.Unlock()
+		d.cond.Broadcast()
+		return err
+	}
+
+	d.cond.Wait()
+	if d.length < 0 {
+		d.read++
+		d.mu.Unlock()
+		return ErrBadRead
+	}
+
+	reader.decoded, reader.ok, err =
+		d.proto.Feed(reader.key, d.socket.buf[:d.length])
+
+	d.read++
+	d.mu.Unlock()
+	return err
+}
+
+type candleReader struct {
+	decoded core.CandleEvent
+	ok      bool
+	demux   *candleDemux
+	key     core.Key
+	_       [16]byte
+}
+
+func newCandleReader(demux *candleDemux, key core.Key) *candleReader {
+	return &candleReader{
+		demux: demux,
+		key:   key,
+	}
+}
+
+func (r *candleReader) Open() error                    { return r.demux.open(r.key) }
+func (r *candleReader) Close() error                   { return r.demux.close(r.key) }
+func (r *candleReader) Read() (core.CandleEvent, bool) { return r.decoded, r.ok }
+func (r *candleReader) Next() error                    { return r.demux.next(r) }
+
+type tradeReader struct {
+	proto   Proto[core.TradeEvent]
+	decoded core.TradeEvent
+	ok      bool
+	key     core.Key
+	_       [24]byte
+	socket  tcp4WebSocket
+	origin  string
+}
+
+func newTradeReader(origin string, proto Proto[core.TradeEvent], key core.Key) *tradeReader {
+	return &tradeReader{
+		proto:  proto,
+		key:    key,
+		origin: origin,
+	}
+}
+
+func (r *tradeReader) Open() error {
+	return open(&r.socket, r.origin, r.proto.Endpoint(), r.proto.Subscribe(r.key))
+}
+
+func (r *tradeReader) Close() error                  { return close(&r.socket, r.proto.Unsubscribe(r.key)) }
+func (r *tradeReader) Read() (core.TradeEvent, bool) { return r.decoded, r.ok }
+
+func (r *tradeReader) Next() error {
+	length := r.socket.bufferTextFrame()
+	if length < 0 {
+		return ErrBadRead
+	}
+
+	decoded, ok, err := r.proto.Feed(r.key, r.socket.buf[:length])
+	if err != nil {
+		return err
+	}
+
+	r.decoded = decoded
+	r.ok = ok
+	return nil
+}
+
+func open(socket *tcp4WebSocket, origin, endpoint string, message []byte) error {
+	if err := socket.dial(origin, endpoint); err != nil {
+		return err
+	}
+
+	socket.writeTextFrame(message)
+	return nil
+}
+
+func close(socket *tcp4WebSocket, message []byte) error {
+	socket.writeTextFrame(message)
+	return socket.close()
 }
 
 // TODO: we should be returning an error
@@ -466,12 +378,12 @@ func NewKeyGetter(online, offline, all DecodeKeyFunc, req http.Request) KeyGette
 	}
 }
 
-func (this *httpGetter) Online() []core.Key  { return this.handle(this.online) }
-func (this *httpGetter) Offline() []core.Key { return this.handle(this.offline) }
-func (this *httpGetter) All() []core.Key     { return this.handle(this.all) }
+func (g *httpGetter) Online() []core.Key  { return g.handle(g.online) }
+func (g *httpGetter) Offline() []core.Key { return g.handle(g.offline) }
+func (g *httpGetter) All() []core.Key     { return g.handle(g.all) }
 
-func (this *httpGetter) handle(decode DecodeKeyFunc) []core.Key {
-	resp, err := this.client.Do(&this.req)
+func (g *httpGetter) handle(decode DecodeKeyFunc) []core.Key {
+	resp, err := g.client.Do(&g.req)
 	if err != nil {
 		return nil
 	}

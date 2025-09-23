@@ -142,6 +142,7 @@ active:
 			}
 		default:
 			if err := reader.Next(); err != nil {
+				reader.Close()
 				u.fault(errNext, err)
 				return
 			}
