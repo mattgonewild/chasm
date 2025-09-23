@@ -71,8 +71,7 @@ func (this *Manager24) Alive() int64 { return this.alive.Load() }
 func (this *Manager24) AddSymbol(factory SymbolFactory) error {
 	id := factory.ID()
 
-	_, err := this.Lineage.Get(id)
-	if err == nil {
+	if this.Lineage.Has(id) {
 		return ErrInvalid
 	}
 
@@ -88,7 +87,7 @@ func (this *Manager24) AddSymbol(factory SymbolFactory) error {
 
 	this.factory.symbol.Set(id, factory)
 	this.Lineage.Set(id, newLineage(Symbol, &container))
-	err = daemon.Run()
+	err := daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
@@ -97,8 +96,7 @@ func (this *Manager24) AddSymbol(factory SymbolFactory) error {
 func (this *Manager24) AddBook(factory BookFactory) error {
 	id := factory.ID()
 
-	_, err := this.Lineage.Get(id)
-	if err == nil {
+	if this.Lineage.Has(id) {
 		return ErrInvalid
 	}
 
@@ -114,7 +112,7 @@ func (this *Manager24) AddBook(factory BookFactory) error {
 
 	this.factory.book.Set(id, factory)
 	this.Lineage.Set(id, newLineage(Book, &container))
-	err = daemon.Run()
+	err := daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
@@ -123,8 +121,7 @@ func (this *Manager24) AddBook(factory BookFactory) error {
 func (this *Manager24) AddCandle(factory CandleFactory) error {
 	id := factory.ID()
 
-	_, err := this.Lineage.Get(id)
-	if err == nil {
+	if this.Lineage.Has(id) {
 		return ErrInvalid
 	}
 
@@ -140,7 +137,7 @@ func (this *Manager24) AddCandle(factory CandleFactory) error {
 
 	this.factory.candle.Set(id, factory)
 	this.Lineage.Set(id, newLineage(Candle, &container))
-	err = daemon.Run()
+	err := daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
@@ -149,8 +146,7 @@ func (this *Manager24) AddCandle(factory CandleFactory) error {
 func (this *Manager24) AddTrade(factory TradeFactory) error {
 	id := factory.ID()
 
-	_, err := this.Lineage.Get(id)
-	if err == nil {
+	if this.Lineage.Has(id) {
 		return ErrInvalid
 	}
 
@@ -166,7 +162,7 @@ func (this *Manager24) AddTrade(factory TradeFactory) error {
 
 	this.factory.trade.Set(id, factory)
 	this.Lineage.Set(id, newLineage(Trade, &container))
-	err = daemon.Run()
+	err := daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
@@ -175,8 +171,7 @@ func (this *Manager24) AddTrade(factory TradeFactory) error {
 func (this *Manager24) AddSchedule(factory ScheduleFactory) error {
 	id := factory.ID()
 
-	_, err := this.Lineage.Get(id)
-	if err == nil {
+	if this.Lineage.Has(id) {
 		return ErrInvalid
 	}
 
@@ -192,7 +187,7 @@ func (this *Manager24) AddSchedule(factory ScheduleFactory) error {
 
 	this.factory.schedule.Set(id, factory)
 	this.Lineage.Set(id, newLineage(Schedule, &container))
-	err = daemon.Run()
+	err := daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
@@ -201,8 +196,7 @@ func (this *Manager24) AddSchedule(factory ScheduleFactory) error {
 func (this *Manager24) AddData(factory DataFactory) error {
 	id := factory.ID()
 
-	_, err := this.Lineage.Get(id)
-	if err == nil {
+	if this.Lineage.Has(id) {
 		return ErrInvalid
 	}
 
@@ -218,7 +212,7 @@ func (this *Manager24) AddData(factory DataFactory) error {
 
 	this.factory.data.Set(id, factory)
 	this.Lineage.Set(id, newLineage(Data, &container))
-	err = daemon.Run()
+	err := daemon.Run()
 	this.alive.Add(1)
 	this.onAdd(daemon)
 	return err
