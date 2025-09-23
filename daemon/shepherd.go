@@ -274,7 +274,7 @@ active:
 			}
 
 			if !ourLog {
-				if log, ourLog = s.claimEventLog(); !ourLog {
+				if ourLog = s.claimEventLog(); !ourLog {
 					goto sink
 				}
 			}
@@ -333,19 +333,14 @@ func (s *shepherd) getSourceReader() source.Reader[core.SymbolEvent] { return s.
 func (s *shepherd) getSinkWriter() sink.Writer[core.SymbolEvent]     { return s.sink.Symbol(shepKey) }
 
 func (s *shepherd) getEventLog() (core.EventLog[core.SymbolEvent], bool) {
-	_, err := s.registry.Get(shepKey)
-	if err != nil {
-		log := kit.NewLog[core.SymbolEvent](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
-		s.registry.Register(shepKey, log)
-		return log, true
-	}
-
-	return s.claimEventLog()
+	return s.registry.ClaimOrRegister(shepKey, s.newEventLog)
 }
 
-func (s *shepherd) claimEventLog() (core.EventLog[core.SymbolEvent], bool) {
-	return s.registry.Claim(shepKey)
+func (s *shepherd) newEventLog() core.EventLog[core.SymbolEvent] {
+	return kit.NewLog[core.SymbolEvent](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
 }
+
+func (s *shepherd) claimEventLog() bool { return s.registry.Claim(shepKey) }
 
 func (s *shepherd) freeEventLog(ourLog *bool) {
 	if *ourLog {

@@ -153,7 +153,7 @@ active:
 			}
 
 			if !ourLog {
-				if log, ourLog = u.claimEventLog(); !ourLog {
+				if ourLog = u.claimEventLog(); !ourLog {
 					goto sink
 				}
 			}
@@ -206,19 +206,14 @@ func (u *herdUnit[T]) getSourceReader() source.Reader[T] { return u.reader }
 func (u *herdUnit[T]) getSinkWriter() sink.Writer[T]     { return u.writer }
 
 func (u *herdUnit[T]) getEventLog() (core.EventLog[T], bool) {
-	_, err := u.registry.Get(u.herdUnitKey())
-	if err != nil {
-		log := kit.NewLog[T](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
-		u.registry.Register(u.herdUnitKey(), log)
-		return log, true
-	}
-
-	return u.claimEventLog()
+	return u.registry.ClaimOrRegister(u.herdUnitKey(), u.newEventLog)
 }
 
-func (u *herdUnit[T]) claimEventLog() (core.EventLog[T], bool) {
-	return u.registry.Claim(u.herdUnitKey())
+func (u *herdUnit[T]) newEventLog() core.EventLog[T] {
+	return kit.NewLog[T](newLogStepWindow, newLogRetention, newLogCapPerLinkedNode)
 }
+
+func (u *herdUnit[T]) claimEventLog() bool { return u.registry.Claim(u.herdUnitKey()) }
 
 func (u *herdUnit[T]) freeEventLog(ourLog *bool) {
 	if *ourLog {
