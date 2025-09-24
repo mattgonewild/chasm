@@ -7,12 +7,11 @@
 package proto
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -544,7 +543,7 @@ const file_service_proto_rawDesc = "" +
 	".proto.Nil\x12\"\n" +
 	"\bShutdown\x12\n" +
 	".proto.Nil\x1a\n" +
-	".proto.NilB3Z1github.com/ringboundio/chasm/service/proto;protob\x06proto3"
+	".proto.NilB2Z0github.com/ringboundio/chasm/service/proto;protob\x06proto3"
 
 var (
 	file_service_proto_rawDescOnce sync.Once

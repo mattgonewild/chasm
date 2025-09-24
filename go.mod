@@ -4,8 +4,8 @@ go 1.25.0
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/ringboundio/common v0.15.7
-	github.com/ringboundio/kit v0.7.3
+	github.com/ringboundio/common v0.16.0
+	github.com/ringboundio/kit v0.8.0
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.9
 )
