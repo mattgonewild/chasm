@@ -267,7 +267,7 @@ active:
 				continue
 			}
 
-			if event.Online {
+			if event.IsOnline() {
 				s.handleOnline(event.Symbol)
 			} else {
 				s.handleOffline(event.Symbol)

@@ -8,14 +8,14 @@ type Event interface {
 }
 
 type SymbolEvent struct {
-	Online        bool
-	Symbol        uint64
-	MinOrder      uint32
-	MinIncrement  uint32
+	Symbol uint64
+
+	// Consider using IsOnline() helper. Negative value indicates online event.
 	EventUnixTime int64
 }
 
-func (this SymbolEvent) UnixNano() int64 { return this.EventUnixTime }
+func (this SymbolEvent) IsOnline() bool  { return this.EventUnixTime < 0 }
+func (this SymbolEvent) UnixNano() int64 { return this.EventUnixTime & math.MaxInt64 }
 
 type BookEvent struct {
 	Bid, Ask      uint32
@@ -37,9 +37,10 @@ func (this TradeEvent) IsSell() bool    { return this < 0 }
 func (this TradeEvent) UnixNano() int64 { return int64(this) & math.MaxInt64 }
 
 type ScheduleEvent struct {
-	Symbol         uint64
-	Balance, Basis uint32
-	EventUnixTime  int64
+	Symbol                 uint64
+	Balance, Basis         uint32
+	MinOrder, MinIncrement uint32
+	EventUnixTime          int64
 }
 
 func (this ScheduleEvent) UnixNano() int64 { return this.EventUnixTime }

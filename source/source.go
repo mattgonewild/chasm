@@ -25,15 +25,30 @@ type (
 		Next() error
 	}
 
-	Proto[T core.Event] interface {
+	Proto interface {
 		Endpoint() string
 		Subscribe(key core.Key) []byte
 		Unsubscribe(key core.Key) []byte
-		EventDecoder[T]
 	}
 
-	EventDecoder[T core.Event] interface {
-		Feed(key core.Key, frame []byte) (T, bool, error)
+	SymbolProto interface {
+		Proto
+		MultiDecoder[core.SymbolEvent]
+	}
+
+	BookProto interface {
+		Proto
+		SingleDecoder[core.BookEvent]
+	}
+
+	CandleProto interface {
+		Proto
+		SinkDecoder[core.CandleEvent]
+	}
+
+	TradeProto interface {
+		Proto
+		MultiDecoder[core.TradeEvent]
 	}
 
 	KeyGetter interface {
@@ -45,29 +60,23 @@ type (
 
 type source struct {
 	origin string
-	symbol Proto[core.SymbolEvent]
-	book   Proto[core.BookEvent]
-	trade  Proto[core.TradeEvent]
-	candle Proto[core.CandleEvent]
+	symbol SymbolProto
+	book   BookProto
+	trade  TradeProto
+	candle CandleProto
 	demux  map[core.Key]*candleDemux
 	getter KeyGetter
 }
 
-func NewSource(
-	origin string,
-	symbol Proto[core.SymbolEvent],
-	book Proto[core.BookEvent],
-	trade Proto[core.TradeEvent],
-	candle Proto[core.CandleEvent],
-	getter KeyGetter,
-) Source {
+func NewSource(origin string,
+	symbol SymbolProto, book BookProto, trade TradeProto, candle CandleProto, getter KeyGetter) Source {
 	return &source{
 		origin: origin,
 		symbol: symbol,
 		book:   book,
 		trade:  trade,
 		candle: candle,
-		demux:  make(map[core.Key]*candleDemux, 512),
+		demux:  make(map[core.Key]*candleDemux, 1024),
 		getter: getter,
 	}
 }
@@ -99,15 +108,17 @@ func (s *source) Trade(key core.Key) Reader[core.TradeEvent] {
 func (s *source) Get() KeyGetter { return s.getter }
 
 type symbolReader struct {
-	proto   Proto[core.SymbolEvent]
-	decoded core.SymbolEvent
-	ok      bool
-	key     core.Key
-	socket  tcp4WebSocket
-	origin  string
+	proto      SymbolProto
+	key        core.Key
+	start, end int16
+	ok         bool
+	buf        [1024]core.SymbolEvent
+	_          [32]byte
+	socket     tcp4WebSocket
+	origin     string
 }
 
-func newSymbolReader(origin string, proto Proto[core.SymbolEvent], key core.Key) *symbolReader {
+func newSymbolReader(origin string, proto SymbolProto, key core.Key) *symbolReader {
 	return &symbolReader{
 		proto:  proto,
 		key:    key,
@@ -120,26 +131,33 @@ func (r *symbolReader) Open() error {
 }
 
 func (r *symbolReader) Close() error                   { return close(&r.socket, r.proto.Unsubscribe(r.key)) }
-func (r *symbolReader) Read() (core.SymbolEvent, bool) { return r.decoded, r.ok }
+func (r *symbolReader) Read() (core.SymbolEvent, bool) { return r.buf[r.start], r.ok }
 
 func (r *symbolReader) Next() error {
+	if r.end > 1 {
+		r.end--
+		r.start++
+		return nil
+	}
+
 	length := r.socket.bufferTextFrame()
 	if length < 0 {
 		return ErrBadRead
 	}
 
-	decoded, ok, err := r.proto.Feed(r.key, r.socket.buf[:length])
+	length, ok, err := r.proto.Decode(r.socket.buf[:length], r.buf[:])
 	if err != nil {
 		return err
 	}
+	r.end = int16(length)
 
-	r.decoded = decoded
 	r.ok = ok
+	r.start = 0
 	return nil
 }
 
 type bookReader struct {
-	proto   Proto[core.BookEvent]
+	proto   BookProto
 	decoded core.BookEvent
 	ok      bool
 	key     core.Key
@@ -148,7 +166,7 @@ type bookReader struct {
 	origin  string
 }
 
-func newBookReader(origin string, proto Proto[core.BookEvent], key core.Key) *bookReader {
+func newBookReader(origin string, proto BookProto, key core.Key) *bookReader {
 	return &bookReader{
 		proto:  proto,
 		key:    key,
@@ -169,7 +187,7 @@ func (r *bookReader) Next() error {
 		return ErrBadRead
 	}
 
-	decoded, ok, err := r.proto.Feed(r.key, r.socket.buf[:length])
+	decoded, ok, err := r.proto.Decode(r.socket.buf[:length])
 	if err != nil {
 		return err
 	}
@@ -183,15 +201,15 @@ type candleDemux struct {
 	socket tcp4WebSocket
 
 	read, total int8
-	length      int16
+	bad         bool
 
 	origin string
-	proto  Proto[core.CandleEvent]
+	proto  CandleProto
 	mu     sync.Mutex
 	cond   *sync.Cond
 }
 
-func newCandleDemux(origin string, proto Proto[core.CandleEvent]) *candleDemux {
+func newCandleDemux(origin string, proto CandleProto) *candleDemux {
 	demux := &candleDemux{
 		origin: origin,
 		proto:  proto,
@@ -248,32 +266,27 @@ func (d *candleDemux) next(reader *candleReader) (err error) {
 		if length < 0 {
 			d.mu.Lock()
 			d.read++
-			d.length = -1
+			d.bad = true
 			d.mu.Unlock()
 			d.cond.Broadcast()
 			return ErrBadRead
 		}
-
-		reader.decoded, reader.ok, err =
-			d.proto.Feed(reader.key, d.socket.buf[:length])
+		reader.decoded, reader.ok, err = d.proto.Sink(reader.key, d.socket.buf[:length])
 
 		d.mu.Lock()
 		d.read++
-		d.length = int16(length)
 		d.mu.Unlock()
 		d.cond.Broadcast()
 		return err
 	}
 
 	d.cond.Wait()
-	if d.length < 0 {
+	if d.bad {
 		d.read++
 		d.mu.Unlock()
 		return ErrBadRead
 	}
-
-	reader.decoded, reader.ok, err =
-		d.proto.Feed(reader.key, d.socket.buf[:d.length])
+	reader.decoded, reader.ok, err = d.proto.Rebuild(reader.key)
 
 	d.read++
 	d.mu.Unlock()
@@ -301,16 +314,17 @@ func (r *candleReader) Read() (core.CandleEvent, bool) { return r.decoded, r.ok 
 func (r *candleReader) Next() error                    { return r.demux.next(r) }
 
 type tradeReader struct {
-	proto   Proto[core.TradeEvent]
-	decoded core.TradeEvent
-	ok      bool
-	key     core.Key
-	_       [24]byte
-	socket  tcp4WebSocket
-	origin  string
+	proto      TradeProto
+	key        core.Key
+	start, end int16
+	ok         bool
+	buf        [128]core.TradeEvent
+	_          [32]byte
+	socket     tcp4WebSocket
+	origin     string
 }
 
-func newTradeReader(origin string, proto Proto[core.TradeEvent], key core.Key) *tradeReader {
+func newTradeReader(origin string, proto TradeProto, key core.Key) *tradeReader {
 	return &tradeReader{
 		proto:  proto,
 		key:    key,
@@ -323,21 +337,28 @@ func (r *tradeReader) Open() error {
 }
 
 func (r *tradeReader) Close() error                  { return close(&r.socket, r.proto.Unsubscribe(r.key)) }
-func (r *tradeReader) Read() (core.TradeEvent, bool) { return r.decoded, r.ok }
+func (r *tradeReader) Read() (core.TradeEvent, bool) { return r.buf[r.start], r.ok }
 
 func (r *tradeReader) Next() error {
+	if r.end > 1 {
+		r.end--
+		r.start++
+		return nil
+	}
+
 	length := r.socket.bufferTextFrame()
 	if length < 0 {
 		return ErrBadRead
 	}
 
-	decoded, ok, err := r.proto.Feed(r.key, r.socket.buf[:length])
+	length, ok, err := r.proto.Decode(r.socket.buf[:length], r.buf[:])
 	if err != nil {
 		return err
 	}
+	r.end = int16(length)
 
-	r.decoded = decoded
 	r.ok = ok
+	r.start = 0
 	return nil
 }
 

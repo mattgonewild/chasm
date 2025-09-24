@@ -64,9 +64,7 @@ const (
 
 	symbolLineMax int = measurement +
 		keyFi + 1 +
-		boolFi + 1 +
-		intFi + 1 +
-		intFi +
+		boolFi +
 		timestamp
 
 	bookLineMax int = measurement +
@@ -88,20 +86,18 @@ const (
 		boolFi +
 		timestamp
 
-	Symbol       byte = 's'
-	Book         byte = 'b'
-	Candle       byte = 'c'
-	Trade        byte = 't'
-	Online       byte = 'o'
-	MinOrder     byte = 'm'
-	MinIncrement byte = 'i'
-	Bid          byte = 'b'
-	Ask          byte = 'a'
-	Open         byte = 'o'
-	High         byte = 'h'
-	Low          byte = 'l'
-	Close        byte = 'c'
-	Buy          byte = 'b'
+	Symbol byte = 's'
+	Book   byte = 'b'
+	Candle byte = 'c'
+	Trade  byte = 't'
+	Online byte = 'o'
+	Bid    byte = 'b'
+	Ask    byte = 'a'
+	Open   byte = 'o'
+	High   byte = 'h'
+	Low    byte = 'l'
+	Close  byte = 'c'
+	Buy    byte = 'b'
 )
 
 type qdbSymbolWriter struct {
@@ -111,11 +107,9 @@ type qdbSymbolWriter struct {
 
 func (this *qdbSymbolWriter) Write(event core.SymbolEvent) error {
 	const (
-		table        byte = Symbol
-		symbol       byte = Symbol
-		online       byte = Online
-		minOrder     byte = MinOrder
-		minIncrement byte = MinIncrement
+		table  byte = Symbol
+		symbol byte = Symbol
+		online byte = Online
 	)
 
 	this.sender.Lock()
@@ -129,12 +123,8 @@ func (this *qdbSymbolWriter) Write(event core.SymbolEvent) error {
 	this.sender.putTable(table)
 	this.sender.putInt(symbol, uint(event.Symbol))
 	this.sender.putByte(',')
-	this.sender.putBool(online, event.Online)
-	this.sender.putByte(',')
-	this.sender.putInt(minOrder, uint(event.MinOrder))
-	this.sender.putByte(',')
-	this.sender.putInt(minIncrement, uint(event.MinIncrement))
-	this.sender.putAt(event.EventUnixTime)
+	this.sender.putBool(online, event.IsOnline())
+	this.sender.putAt(event.UnixNano())
 
 	this.sender.Unlock()
 	return nil
