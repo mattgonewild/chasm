@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/mattgonewild/chasm/core"
-	"github.com/mattgonewild/chasm/sink"
-	"github.com/mattgonewild/chasm/source"
-	"github.com/mattgonewild/kit"
+	"github.com/ringboundio/chasm/core"
+	"github.com/ringboundio/chasm/sink"
+	"github.com/ringboundio/chasm/source"
+	"github.com/ringboundio/kit"
 )
 
 const (

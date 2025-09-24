@@ -2,7 +2,7 @@ package proto
 
 import (
 	"github.com/google/uuid"
-	"github.com/mattgonewild/kit"
+	"github.com/ringboundio/kit"
 )
 
 func SplitUUID(id uuid.UUID) (uint64, uint64) { return kit.Unpack16(id) }

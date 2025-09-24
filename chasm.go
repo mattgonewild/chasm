@@ -1,9 +1,9 @@
 package chasm
 
 import (
-	"github.com/mattgonewild/chasm/core"
-	"github.com/mattgonewild/chasm/service"
-	"github.com/mattgonewild/chasm/service/proto"
+	"github.com/ringboundio/chasm/core"
+	"github.com/ringboundio/chasm/service"
+	"github.com/ringboundio/chasm/service/proto"
 )
 
 func NewManager7(cfg core.Config) core.Manager  { return core.NewManager7(cfg) }

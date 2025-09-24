@@ -1,6 +1,6 @@
 package core
 
-import "github.com/mattgonewild/kit"
+import "github.com/ringboundio/kit"
 
 type (
 	SymbolLogRegistry   = Registry[EventLog[SymbolEvent]]

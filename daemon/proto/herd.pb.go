@@ -7,11 +7,12 @@
 package proto
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -73,7 +74,7 @@ const file_herd_proto_rawDesc = "" +
 	"\n" +
 	"herd.proto\x12\x05proto\"\"\n" +
 	"\x0eHerdUnitConfig\x12\x10\n" +
-	"\x03tag\x18\x01 \x01(\tR\x03tagB2Z0github.com/mattgonewild/chasm/daemon/proto;protob\x06proto3"
+	"\x03tag\x18\x01 \x01(\tR\x03tagB2Z0github.com/ringboundio/chasm/daemon/proto;protob\x06proto3"
 
 var (
 	file_herd_proto_rawDescOnce sync.Once

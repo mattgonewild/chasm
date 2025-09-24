@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "github.com/mattgonewild/chasm/daemon/proto;proto";
+option go_package = "github.com/ringboundio/chasm/daemon/proto;proto";
 
 message ShepherdConfig {
     // Ignore is a set of Keys to ignore.

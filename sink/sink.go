@@ -5,7 +5,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/mattgonewild/chasm/core"
+	"github.com/ringboundio/chasm/core"
 )
 
 type Sink interface {

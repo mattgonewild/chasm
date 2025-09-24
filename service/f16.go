@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/mattgonewild/chasm/core"
-	"github.com/mattgonewild/chasm/service/proto"
+	"github.com/ringboundio/chasm/core"
+	"github.com/ringboundio/chasm/service/proto"
 )
 
 type forgeCore16 struct {

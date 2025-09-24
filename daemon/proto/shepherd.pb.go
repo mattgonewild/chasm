@@ -7,11 +7,12 @@
 package proto
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -87,7 +88,7 @@ const file_shepherd_proto_rawDesc = "" +
 	"\binterval\x18\x02 \x03(\x0fR\binterval\x1a9\n" +
 	"\vIgnoreEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x06R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01B2Z0github.com/mattgonewild/chasm/daemon/proto;protob\x06proto3"
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01B2Z0github.com/ringboundio/chasm/daemon/proto;protob\x06proto3"
 
 var (
 	file_shepherd_proto_rawDescOnce sync.Once

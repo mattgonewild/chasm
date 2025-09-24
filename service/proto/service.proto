@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "github.com/mattgonewild/chasm/service/proto;proto";
+option go_package = "github.com/ringboundio/chasm/service/proto;proto";
 
 service Forge {
     rpc AddSymbol(BinInfo) returns (Nil);

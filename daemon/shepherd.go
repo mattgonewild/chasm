@@ -5,11 +5,11 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/mattgonewild/chasm/core"
-	"github.com/mattgonewild/chasm/daemon/proto"
-	"github.com/mattgonewild/chasm/sink"
-	"github.com/mattgonewild/chasm/source"
-	"github.com/mattgonewild/kit"
+	"github.com/ringboundio/chasm/core"
+	"github.com/ringboundio/chasm/daemon/proto"
+	"github.com/ringboundio/chasm/sink"
+	"github.com/ringboundio/chasm/source"
+	"github.com/ringboundio/kit"
 	protobuf "google.golang.org/protobuf/proto"
 )
 

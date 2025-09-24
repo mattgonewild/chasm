@@ -4,8 +4,8 @@ import (
 	"errors"
 	"plugin"
 
-	"github.com/mattgonewild/chasm/core"
-	"github.com/mattgonewild/chasm/service/proto"
+	"github.com/ringboundio/chasm/core"
+	"github.com/ringboundio/chasm/service/proto"
 )
 
 var (

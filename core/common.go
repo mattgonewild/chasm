@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/google/uuid"
-	"github.com/mattgonewild/common"
+	"github.com/ringboundio/common"
 )
 
 type (

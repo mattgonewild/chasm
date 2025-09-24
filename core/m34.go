@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/google/uuid"
-	"github.com/mattgonewild/kit"
+	"github.com/ringboundio/kit"
 )
 
 type Manager34 struct {

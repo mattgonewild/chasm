@@ -1,11 +1,11 @@
-module github.com/mattgonewild/chasm
+module github.com/ringboundio/chasm
 
 go 1.25.0
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/mattgonewild/common v0.15.7
-	github.com/mattgonewild/kit v0.7.3
+	github.com/ringboundio/common v0.15.7
+	github.com/ringboundio/kit v0.7.3
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.9
 )
