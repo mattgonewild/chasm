@@ -25,32 +25,6 @@ type (
 		Next() error
 	}
 
-	Proto interface {
-		Endpoint() string
-		Subscribe(key core.Key) []byte
-		Unsubscribe(key core.Key) []byte
-	}
-
-	SymbolProto interface {
-		Proto
-		MultiDecoder[core.SymbolEvent]
-	}
-
-	BookProto interface {
-		Proto
-		SingleDecoder[core.BookEvent]
-	}
-
-	CandleProto interface {
-		Proto
-		SinkDecoder[core.CandleEvent]
-	}
-
-	TradeProto interface {
-		Proto
-		MultiDecoder[core.TradeEvent]
-	}
-
 	KeyGetter interface {
 		Online() []core.Key
 		Offline() []core.Key
@@ -60,16 +34,22 @@ type (
 
 type source struct {
 	origin string
-	symbol SymbolProto
-	book   BookProto
-	trade  TradeProto
-	candle CandleProto
+	symbol SymbolCodec
+	book   BookCodec
+	trade  TradeCodec
+	candle CandleCodec
 	demux  map[core.Key]*candleDemux
 	getter KeyGetter
 }
 
-func NewSource(origin string,
-	symbol SymbolProto, book BookProto, trade TradeProto, candle CandleProto, getter KeyGetter) Source {
+func NewSource(
+	origin string,
+	symbol SymbolCodec,
+	book BookCodec,
+	trade TradeCodec,
+	candle CandleCodec,
+	getter KeyGetter,
+) Source {
 	return &source{
 		origin: origin,
 		symbol: symbol,
@@ -108,7 +88,7 @@ func (s *source) Trade(key core.Key) Reader[core.TradeEvent] {
 func (s *source) Get() KeyGetter { return s.getter }
 
 type symbolReader struct {
-	proto      SymbolProto
+	codec      SymbolCodec
 	key        core.Key
 	start, end int16
 	ok         bool
@@ -118,19 +98,19 @@ type symbolReader struct {
 	origin     string
 }
 
-func newSymbolReader(origin string, proto SymbolProto, key core.Key) *symbolReader {
+func newSymbolReader(origin string, codec SymbolCodec, key core.Key) *symbolReader {
 	return &symbolReader{
-		proto:  proto,
+		codec:  codec,
 		key:    key,
 		origin: origin,
 	}
 }
 
 func (r *symbolReader) Open() error {
-	return open(&r.socket, r.origin, r.proto.Endpoint(), r.proto.Subscribe(r.key))
+	return open(&r.socket, r.origin, r.codec.Endpoint(), r.codec.Subscribe(r.key))
 }
 
-func (r *symbolReader) Close() error                   { return close(&r.socket, r.proto.Unsubscribe(r.key)) }
+func (r *symbolReader) Close() error                   { return close(&r.socket, r.codec.Unsubscribe(r.key)) }
 func (r *symbolReader) Read() (core.SymbolEvent, bool) { return r.buf[r.start], r.ok }
 
 func (r *symbolReader) Next() error {
@@ -145,7 +125,7 @@ func (r *symbolReader) Next() error {
 		return ErrBadRead
 	}
 
-	length, ok, err := r.proto.Decode(r.socket.buf[:length], r.buf[:])
+	length, ok, err := r.codec.Decode(r.socket.buf[:length], r.buf[:])
 	if err != nil {
 		return err
 	}
@@ -157,7 +137,7 @@ func (r *symbolReader) Next() error {
 }
 
 type bookReader struct {
-	proto   BookProto
+	codec   BookCodec
 	decoded core.BookEvent
 	ok      bool
 	key     core.Key
@@ -166,19 +146,19 @@ type bookReader struct {
 	origin  string
 }
 
-func newBookReader(origin string, proto BookProto, key core.Key) *bookReader {
+func newBookReader(origin string, codec BookCodec, key core.Key) *bookReader {
 	return &bookReader{
-		proto:  proto,
+		codec:  codec,
 		key:    key,
 		origin: origin,
 	}
 }
 
 func (r *bookReader) Open() error {
-	return open(&r.socket, r.origin, r.proto.Endpoint(), r.proto.Subscribe(r.key))
+	return open(&r.socket, r.origin, r.codec.Endpoint(), r.codec.Subscribe(r.key))
 }
 
-func (r *bookReader) Close() error                 { return close(&r.socket, r.proto.Unsubscribe(r.key)) }
+func (r *bookReader) Close() error                 { return close(&r.socket, r.codec.Unsubscribe(r.key)) }
 func (r *bookReader) Read() (core.BookEvent, bool) { return r.decoded, r.ok }
 
 func (r *bookReader) Next() error {
@@ -187,7 +167,7 @@ func (r *bookReader) Next() error {
 		return ErrBadRead
 	}
 
-	decoded, ok, err := r.proto.Decode(r.socket.buf[:length])
+	decoded, ok, err := r.codec.Decode(r.socket.buf[:length])
 	if err != nil {
 		return err
 	}
@@ -204,15 +184,15 @@ type candleDemux struct {
 	bad         bool
 
 	origin string
-	proto  CandleProto
+	codec  CandleCodec
 	mu     sync.Mutex
 	cond   *sync.Cond
 }
 
-func newCandleDemux(origin string, proto CandleProto) *candleDemux {
+func newCandleDemux(origin string, codec CandleCodec) *candleDemux {
 	demux := &candleDemux{
 		origin: origin,
-		proto:  proto,
+		codec:  codec,
 	}
 
 	demux.cond = sync.NewCond(&demux.mu)
@@ -222,8 +202,8 @@ func newCandleDemux(origin string, proto CandleProto) *candleDemux {
 func (d *candleDemux) open(key core.Key) error {
 	d.mu.Lock()
 	if d.total == 0 {
-		if err := open(&d.socket, d.origin, d.proto.Endpoint(), d.proto.Subscribe(key)); err != nil {
-			d.proto.Unsubscribe(key)
+		if err := open(&d.socket, d.origin, d.codec.Endpoint(), d.codec.Subscribe(key)); err != nil {
+			d.codec.Unsubscribe(key)
 			d.mu.Unlock()
 			return err
 		}
@@ -236,7 +216,7 @@ func (d *candleDemux) open(key core.Key) error {
 	d.total++
 	d.read++
 
-	d.proto.Subscribe(key)
+	d.codec.Subscribe(key)
 	d.mu.Unlock()
 	return nil
 }
@@ -245,13 +225,13 @@ func (d *candleDemux) close(key core.Key) error {
 	d.mu.Lock()
 	if d.total == 1 {
 		d.total--
-		err := close(&d.socket, d.proto.Unsubscribe(key))
+		err := close(&d.socket, d.codec.Unsubscribe(key))
 		d.mu.Unlock()
 		return err
 	}
 
 	d.total--
-	d.proto.Unsubscribe(key)
+	d.codec.Unsubscribe(key)
 	d.mu.Unlock()
 	return nil
 }
@@ -271,7 +251,7 @@ func (d *candleDemux) next(reader *candleReader) (err error) {
 			d.cond.Broadcast()
 			return ErrBadRead
 		}
-		reader.decoded, reader.ok, err = d.proto.Sink(reader.key, d.socket.buf[:length])
+		reader.decoded, reader.ok, err = d.codec.Sink(reader.key, d.socket.buf[:length])
 
 		d.mu.Lock()
 		d.read++
@@ -286,7 +266,7 @@ func (d *candleDemux) next(reader *candleReader) (err error) {
 		d.mu.Unlock()
 		return ErrBadRead
 	}
-	reader.decoded, reader.ok, err = d.proto.Rebuild(reader.key)
+	reader.decoded, reader.ok, err = d.codec.Try(reader.key)
 
 	d.read++
 	d.mu.Unlock()
@@ -313,7 +293,7 @@ func (r *candleReader) Read() (core.CandleEvent, bool) { return r.decoded, r.ok 
 func (r *candleReader) Next() error                    { return r.demux.next(r) }
 
 type tradeReader struct {
-	proto      TradeProto
+	codec      TradeCodec
 	key        core.Key
 	start, end int16
 	ok         bool
@@ -323,19 +303,19 @@ type tradeReader struct {
 	origin     string
 }
 
-func newTradeReader(origin string, proto TradeProto, key core.Key) *tradeReader {
+func newTradeReader(origin string, codec TradeCodec, key core.Key) *tradeReader {
 	return &tradeReader{
-		proto:  proto,
+		codec:  codec,
 		key:    key,
 		origin: origin,
 	}
 }
 
 func (r *tradeReader) Open() error {
-	return open(&r.socket, r.origin, r.proto.Endpoint(), r.proto.Subscribe(r.key))
+	return open(&r.socket, r.origin, r.codec.Endpoint(), r.codec.Subscribe(r.key))
 }
 
-func (r *tradeReader) Close() error                  { return close(&r.socket, r.proto.Unsubscribe(r.key)) }
+func (r *tradeReader) Close() error                  { return close(&r.socket, r.codec.Unsubscribe(r.key)) }
 func (r *tradeReader) Read() (core.TradeEvent, bool) { return r.buf[r.start], r.ok }
 
 func (r *tradeReader) Next() error {
@@ -350,7 +330,7 @@ func (r *tradeReader) Next() error {
 		return ErrBadRead
 	}
 
-	length, ok, err := r.proto.Decode(r.socket.buf[:length], r.buf[:])
+	length, ok, err := r.codec.Decode(r.socket.buf[:length], r.buf[:])
 	if err != nil {
 		return err
 	}
