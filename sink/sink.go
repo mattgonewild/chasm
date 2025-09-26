@@ -52,8 +52,8 @@ func (this *sink) Trade(key core.Key) Writer[core.TradeEvent] {
 }
 
 const (
-	maxKeyLen  int = 10
-	maxUintLen int = 10
+	maxKeyLen  int = 20
+	maxUintLen int = 20
 	maxTimeLen int = 20
 
 	measurement int = 2

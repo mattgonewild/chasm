@@ -161,7 +161,7 @@ type bookReader struct {
 	decoded core.BookEvent
 	ok      bool
 	key     core.Key
-	_       [16]byte
+	_       [8]byte
 	socket  tcp4WebSocket
 	origin  string
 }
@@ -298,7 +298,6 @@ type candleReader struct {
 	ok      bool
 	demux   *candleDemux
 	key     core.Key
-	_       [16]byte
 }
 
 func newCandleReader(demux *candleDemux, key core.Key) *candleReader {
