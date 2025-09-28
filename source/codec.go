@@ -83,19 +83,19 @@ func (c *symbolCodec) Decode(frame []byte, destination []core.SymbolEvent) (int,
 }
 
 type bookCodec struct {
-	bookBase
+	BookBase
 	sub    ProtoMsgFunc
 	unsub  ProtoMsgFunc
-	decode LossyDecodeFunc[core.BookEvent, bookBase]
+	decode LossyDecodeFunc[core.BookEvent, BookBase]
 }
 
 func NewBookCodec(
 	endpoint endpoint,
 	sub, unsub ProtoMsgFunc,
-	decode LossyDecodeFunc[core.BookEvent, bookBase],
+	decode LossyDecodeFunc[core.BookEvent, BookBase],
 ) BookCodec {
 	return &bookCodec{
-		bookBase: bookBase{endpoint: endpoint},
+		BookBase: BookBase{endpoint: endpoint},
 		sub:      sub,
 		unsub:    unsub,
 		decode:   decode,
@@ -106,25 +106,25 @@ func (c *bookCodec) Subscribe(key core.Key) []byte   { return c.sub(key) }
 func (c *bookCodec) Unsubscribe(key core.Key) []byte { return c.unsub(key) }
 
 func (c *bookCodec) Decode(frame []byte) (core.BookEvent, bool, error) {
-	return c.decode(&c.bookBase, frame)
+	return c.decode(&c.BookBase, frame)
 }
 
 type candleCodec struct {
-	candleBase
+	CandleBase
 	sub   ProtoMsgFunc
 	unsub ProtoMsgFunc
-	sink  SinkFunc[core.CandleEvent, candleBase]
-	try   SinkTryFunc[core.CandleEvent, candleBase]
+	sink  SinkFunc[core.CandleEvent, CandleBase]
+	try   SinkTryFunc[core.CandleEvent, CandleBase]
 }
 
 func NewCandleCodec(
 	endpoint endpoint,
 	sub, unsub ProtoMsgFunc,
-	sink SinkFunc[core.CandleEvent, candleBase],
-	try SinkTryFunc[core.CandleEvent, candleBase],
+	sink SinkFunc[core.CandleEvent, CandleBase],
+	try SinkTryFunc[core.CandleEvent, CandleBase],
 ) CandleCodec {
 	return &candleCodec{
-		candleBase: candleBase{endpoint: endpoint},
+		CandleBase: CandleBase{endpoint: endpoint},
 		sub:        sub,
 		unsub:      unsub,
 		sink:       sink,
@@ -136,11 +136,11 @@ func (c *candleCodec) Subscribe(key core.Key) []byte   { return c.sub(key) }
 func (c *candleCodec) Unsubscribe(key core.Key) []byte { return c.unsub(key) }
 
 func (c *candleCodec) Sink(key core.Key, frame []byte) (core.CandleEvent, bool, error) {
-	return c.sink(&c.candleBase, key, frame)
+	return c.sink(&c.CandleBase, key, frame)
 }
 
 func (c *candleCodec) Try(key core.Key) (core.CandleEvent, bool, error) {
-	return c.try(&c.candleBase, key)
+	return c.try(&c.CandleBase, key)
 }
 
 type tradeCodec struct {
@@ -171,42 +171,42 @@ func (c *tradeCodec) Decode(frame []byte, destination []core.TradeEvent) (int, b
 }
 
 type codecBase interface {
-	symbolBase | bookBase | candleBase | tradeBase
+	symbolBase | BookBase | CandleBase | tradeBase
 }
 
 type symbolBase struct {
 	endpoint
 }
 
-type bid uint64
+type Bid uint64
 
-func (this bid) Before(that bid) bool { return this > that }
-func (this bid) After(that bid) bool  { return this < that }
-func (this bid) Equal(that bid) bool  { return this == that }
-func (this bid) Compare(that bid) int { return kit.BoolToInt(this < that) - kit.BoolToInt(this > that) }
+func (this Bid) Before(that Bid) bool { return this > that }
+func (this Bid) After(that Bid) bool  { return this < that }
+func (this Bid) Equal(that Bid) bool  { return this == that }
+func (this Bid) Compare(that Bid) int { return kit.BoolToInt(this < that) - kit.BoolToInt(this > that) }
 
-type ask uint64
+type Ask uint64
 
-func (this ask) Before(that ask) bool { return this < that }
-func (this ask) After(that ask) bool  { return this > that }
-func (this ask) Equal(that ask) bool  { return this == that }
-func (this ask) Compare(that ask) int { return kit.BoolToInt(this > that) - kit.BoolToInt(this < that) }
+func (this Ask) Before(that Ask) bool { return this < that }
+func (this Ask) After(that Ask) bool  { return this > that }
+func (this Ask) Equal(that Ask) bool  { return this == that }
+func (this Ask) Compare(that Ask) int { return kit.BoolToInt(this > that) - kit.BoolToInt(this < that) }
 
-type bookBase struct {
-	bid kit.LeakyHeap[bid]
-	ask kit.LeakyHeap[ask]
+type BookBase struct {
+	Bid kit.LeakyHeap[Bid]
+	Ask kit.LeakyHeap[Ask]
 	endpoint
 }
 
-type candleStore struct {
-	interval [10]int64
-	new      [10]bool
-	candle   [10]core.CandleEvent
+type CandleStore struct {
+	Interval [10]int64
+	New      [10]bool
+	Candle   [10]core.CandleEvent
 	_        [16]byte
 }
 
-type candleBase struct {
-	symbol [1024]candleStore
+type CandleBase struct {
+	Symbol [1024]CandleStore
 	endpoint
 }
 
