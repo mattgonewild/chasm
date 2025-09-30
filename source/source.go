@@ -155,7 +155,12 @@ func newBookReader(origin string, codec BookCodec, key core.Key) *bookReader {
 }
 
 func (r *bookReader) Open() error {
-	return open(&r.socket, r.origin, r.codec.Endpoint(), r.codec.Subscribe(r.key))
+	if err := open(&r.socket, r.origin, r.codec.Endpoint(), r.codec.Subscribe(r.key)); err != nil {
+		r.codec.Unsubscribe(r.key)
+		return err
+	}
+
+	return nil
 }
 
 func (r *bookReader) Close() error                 { return close(&r.socket, r.codec.Unsubscribe(r.key)) }
@@ -167,7 +172,7 @@ func (r *bookReader) Next() error {
 		return ErrBadRead
 	}
 
-	decoded, ok, err := r.codec.Decode(r.socket.buf[:length])
+	decoded, ok, err := r.codec.Decode(r.key, r.socket.buf[:length])
 	if err != nil {
 		return err
 	}

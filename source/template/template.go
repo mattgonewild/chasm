@@ -29,7 +29,7 @@ func NewBookCodec() source.BookCodec {
 
 func bookSubMsg(key core.Key) []byte
 func bookUnsubMsg(key core.Key) []byte
-func lossyDecodeBook(base *source.BookBase, frame []byte) (core.BookEvent, bool, error)
+func lossyDecodeBook(state *source.OrderBook, frame []byte) (core.BookEvent, bool, error)
 
 func NewCandleCodec() source.CandleCodec {
 	return source.NewCandleCodec(
@@ -43,8 +43,8 @@ func NewCandleCodec() source.CandleCodec {
 
 func candleSubMsg(key core.Key) []byte
 func candleUnsubMsg(key core.Key) []byte
-func sinkCandleTrade(base *source.CandleBase, key core.Key, frame []byte) (core.CandleEvent, bool, error)
-func tryCandle(base *source.CandleBase, key core.Key) (core.CandleEvent, bool, error)
+func sinkCandleTrade(state *source.CandleStore, key core.Key, frame []byte) (core.CandleEvent, bool, error)
+func tryCandle(state *source.CandleStore, key core.Key) (core.CandleEvent, bool, error)
 
 func NewTradeCodec() source.TradeCodec {
 	return source.NewTradeCodec(

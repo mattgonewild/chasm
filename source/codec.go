@@ -1,6 +1,9 @@
 package source
 
 import (
+	"runtime"
+	"sync/atomic"
+
 	"github.com/ringboundio/chasm/core"
 	"github.com/ringboundio/kit"
 )
@@ -35,10 +38,10 @@ type (
 	ProtoMsgFunc func(key core.Key) []byte
 
 	UnitDecoder[T core.Event] interface {
-		Decode(frame []byte) (T, bool, error)
+		Decode(key core.Key, frame []byte) (T, bool, error)
 	}
 
-	LossyDecodeFunc[T core.Event, B codecBase] func(base *B, frame []byte) (T, bool, error)
+	LossyDecodeFunc[T core.Event, S WorkingState] func(state *S, frame []byte) (T, bool, error)
 
 	BatchDecoder[T core.Event] interface {
 		Decode(frame []byte, destination []T) (int, bool, error)
@@ -51,12 +54,12 @@ type (
 		Try(key core.Key) (T, bool, error)
 	}
 
-	SinkFunc[T core.Event, B codecBase]    func(base *B, key core.Key, frame []byte) (T, bool, error)
-	SinkTryFunc[T core.Event, B codecBase] func(base *B, key core.Key) (T, bool, error)
+	SinkFunc[T core.Event, S WorkingState]    func(state *S, key core.Key, frame []byte) (T, bool, error)
+	SinkTryFunc[T core.Event, S WorkingState] func(state *S, key core.Key) (T, bool, error)
 )
 
 type symbolCodec struct {
-	symbolBase
+	endpoint
 	sub    ProtoMsgFunc
 	unsub  ProtoMsgFunc
 	decode BatchDecodeFunc[core.SymbolEvent]
@@ -68,10 +71,10 @@ func NewSymbolCodec(
 	decode BatchDecodeFunc[core.SymbolEvent],
 ) SymbolCodec {
 	return &symbolCodec{
-		symbolBase: symbolBase{endpoint: endpoint},
-		sub:        sub,
-		unsub:      unsub,
-		decode:     decode,
+		endpoint: endpoint,
+		sub:      sub,
+		unsub:    unsub,
+		decode:   decode,
 	}
 }
 
@@ -82,69 +85,394 @@ func (c *symbolCodec) Decode(frame []byte, destination []core.SymbolEvent) (int,
 	return c.decode(frame, destination)
 }
 
+const (
+	cuckooCap     int    = 1024 * 4
+	cuckooMask    uint64 = uint64(cuckooCap) - 1
+	cuckooMaxKick int    = 32
+)
+
 type bookCodec struct {
-	BookBase
+	index [cuckooCap]core.Key
+	store [cuckooCap]OrderBook
+	endpoint
 	sub    ProtoMsgFunc
 	unsub  ProtoMsgFunc
-	decode LossyDecodeFunc[core.BookEvent, BookBase]
+	decode LossyDecodeFunc[core.BookEvent, OrderBook]
+	_      [24]byte
 }
 
 func NewBookCodec(
 	endpoint endpoint,
 	sub, unsub ProtoMsgFunc,
-	decode LossyDecodeFunc[core.BookEvent, BookBase],
+	decode LossyDecodeFunc[core.BookEvent, OrderBook],
 ) BookCodec {
 	return &bookCodec{
-		BookBase: BookBase{endpoint: endpoint},
+		endpoint: endpoint,
 		sub:      sub,
 		unsub:    unsub,
 		decode:   decode,
 	}
 }
 
-func (c *bookCodec) Subscribe(key core.Key) []byte   { return c.sub(key) }
-func (c *bookCodec) Unsubscribe(key core.Key) []byte { return c.unsub(key) }
+func (c *bookCodec) Subscribe(key core.Key) []byte {
+	var (
+		hash = mix(key)
+		i    = int(hash & cuckooMask)
+		ii   = int(uint64(i) ^ (hash|1)&cuckooMask)
+	)
 
-func (c *bookCodec) Decode(frame []byte) (core.BookEvent, bool, error) {
-	return c.decode(&c.BookBase, frame)
+	if c.index[i] == 0 {
+		c.index[i] = key
+		c.store[i].meta = key
+		return c.sub(key)
+	}
+
+	if c.index[ii] == 0 {
+		c.index[ii] = key
+		c.store[ii].meta = key
+		return c.sub(key)
+	}
+
+	var (
+		Bid   kit.LeakyHeap[Bid]
+		Ask   kit.LeakyHeap[Ask]
+		k     = key
+		count int
+	)
+
+	for count < cuckooMaxKick {
+		meta := k
+		k, c.index[i] = c.index[i], k
+
+		s := &c.store[i]
+		s.Lock()
+		Bid, s.Bid = s.Bid, Bid
+		Ask, s.Ask = s.Ask, Ask
+		s.meta = meta
+		s.Unlock()
+
+		if k == 0 {
+			return c.sub(key)
+		}
+
+		var (
+			hash = mix(k)
+			p1   = int(hash & cuckooMask)
+			p2   = int(uint64(p1) ^ (hash|1)&cuckooMask)
+		)
+
+		if i == p1 {
+			i = p2
+		} else {
+			i = p1
+		}
+
+		count++
+	}
+
+	// TODO: debate on stash
+	panic(key)
+}
+
+// TODO: debate on clearing stale state
+func (c *bookCodec) Unsubscribe(key core.Key) []byte {
+	var (
+		hash = mix(key)
+		i    = int(hash & cuckooMask)
+		ii   = int(uint64(i) ^ (hash|1)&cuckooMask)
+	)
+
+	for {
+		if c.index[i] == key {
+			s := &c.store[i]
+			s.Lock()
+			if s.meta == key {
+				s.meta = 0
+				s.Unlock()
+				c.index[i] = 0
+				return c.unsub(key)
+			}
+			s.Unlock()
+		}
+
+		if c.index[ii] == key {
+			s := &c.store[ii]
+			s.Lock()
+			if s.meta == key {
+				s.meta = 0
+				s.Unlock()
+				c.index[ii] = 0
+				return c.unsub(key)
+			}
+			s.Unlock()
+		}
+	}
+}
+
+func (c *bookCodec) Decode(key core.Key, frame []byte) (core.BookEvent, bool, error) {
+	return c.decode(c.getStore(key), frame)
+}
+
+func (c *bookCodec) getStore(key core.Key) *OrderBook {
+	var (
+		hash = mix(key)
+		i    = int(hash & cuckooMask)
+		ii   = int(uint64(i) ^ (hash|1)&cuckooMask)
+	)
+
+	for {
+		if c.index[i] == key {
+			s := &c.store[i]
+			s.Lock()
+			if s.meta == key {
+				return s
+			}
+			s.Unlock()
+		}
+
+		if c.index[ii] == key {
+			s := &c.store[ii]
+			s.Lock()
+			if s.meta == key {
+				return s
+			}
+			s.Unlock()
+		}
+	}
 }
 
 type candleCodec struct {
-	CandleBase
+	index [cuckooCap]core.Key
+	store [cuckooCap]CandleStore
+	endpoint
 	sub   ProtoMsgFunc
 	unsub ProtoMsgFunc
-	sink  SinkFunc[core.CandleEvent, CandleBase]
-	try   SinkTryFunc[core.CandleEvent, CandleBase]
+	sink  SinkFunc[core.CandleEvent, CandleStore]
+	try   SinkTryFunc[core.CandleEvent, CandleStore]
+	_     [16]byte
 }
 
 func NewCandleCodec(
 	endpoint endpoint,
 	sub, unsub ProtoMsgFunc,
-	sink SinkFunc[core.CandleEvent, CandleBase],
-	try SinkTryFunc[core.CandleEvent, CandleBase],
+	sink SinkFunc[core.CandleEvent, CandleStore],
+	try SinkTryFunc[core.CandleEvent, CandleStore],
 ) CandleCodec {
 	return &candleCodec{
-		CandleBase: CandleBase{endpoint: endpoint},
-		sub:        sub,
-		unsub:      unsub,
-		sink:       sink,
-		try:        try,
+		endpoint: endpoint,
+		sub:      sub,
+		unsub:    unsub,
+		sink:     sink,
+		try:      try,
 	}
 }
 
-func (c *candleCodec) Subscribe(key core.Key) []byte   { return c.sub(key) }
-func (c *candleCodec) Unsubscribe(key core.Key) []byte { return c.unsub(key) }
+func (c *candleCodec) Subscribe(key core.Key) []byte {
+	var (
+		interval = int64(key & core.IntMask)
+		base     = key &^ core.IntMask
+		hash     = mix(base)
+		i        = int(hash & cuckooMask)
+		ii       = int(uint64(i) ^ (hash|1)&cuckooMask)
+	)
+
+	if c.index[i] == base {
+		s := &c.store[i]
+		s.Lock()
+		for index, got := range s.Interval {
+			if got == 0 {
+				s.Interval[index] = interval
+				s.meta++
+				s.Unlock()
+				return c.sub(key)
+			}
+		}
+
+		s.Unlock()
+		panic(key)
+	}
+
+	if c.index[ii] == base {
+		s := &c.store[ii]
+		s.Lock()
+		for index, got := range s.Interval {
+			if got == 0 {
+				s.Interval[index] = interval
+				s.meta++
+				s.Unlock()
+				return c.sub(key)
+			}
+		}
+
+		s.Unlock()
+		panic(key)
+	}
+
+	if c.index[i] == 0 {
+		c.index[i] = base
+		c.store[i].Interval[0] = interval
+		c.store[i].meta = base | 1
+		return c.sub(key)
+	}
+
+	if c.index[ii] == 0 {
+		c.index[ii] = base
+		c.store[ii].Interval[0] = interval
+		c.store[ii].meta = base | 1
+		return c.sub(key)
+	}
+
+	var (
+		Interval = [10]int64{0: interval}
+		New      [10]bool
+		Candle   [10]core.CandleEvent
+		meta     = base | 1
+		k        = base
+		count    int
+	)
+
+	for count < cuckooMaxKick {
+		k, c.index[i] = c.index[i], k
+
+		s := &c.store[i]
+		s.Lock()
+		Interval, s.Interval = s.Interval, Interval
+		New, s.New = s.New, New
+		Candle, s.Candle = s.Candle, Candle
+		meta, s.meta = s.meta, meta
+		s.Unlock()
+
+		if k == 0 {
+			return c.sub(key)
+		}
+
+		var (
+			hash = mix(k)
+			p1   = int(hash & cuckooMask)
+			p2   = int(uint64(p1) ^ (hash|1)&cuckooMask)
+		)
+
+		if i == p1 {
+			i = p2
+		} else {
+			i = p1
+		}
+
+		count++
+	}
+
+	// TODO: debate on stash
+	panic(key)
+}
+
+// TODO: debate on clearing stale state
+func (c *candleCodec) Unsubscribe(key core.Key) []byte {
+	var (
+		base = key &^ core.IntMask
+		hash = mix(base)
+		i    = int(hash & cuckooMask)
+		ii   = int(uint64(i) ^ (hash|1)&cuckooMask)
+		want = int64(key & core.IntMask)
+	)
+
+	for {
+		if c.index[i] == base {
+			s := &c.store[i]
+			s.Lock()
+			if s.meta&^core.IntMask == base {
+				for index, got := range s.Interval {
+					if got == want {
+						s.Interval[index] = 0
+						if (s.meta & core.IntMask) == 1 {
+							c.index[i] = 0
+							s.meta = 0
+							s.Unlock()
+							return c.unsub(key)
+						}
+						s.meta--
+						s.Unlock()
+						return c.unsub(key)
+					}
+				}
+				s.Unlock()
+				panic(key)
+			}
+			s.Unlock()
+		}
+
+		if c.index[ii] == base {
+			s := &c.store[ii]
+			s.Lock()
+			if s.meta&^core.IntMask == base {
+				for index, got := range s.Interval {
+					if got == want {
+						s.Interval[index] = 0
+						if (s.meta & core.IntMask) == 1 {
+							c.index[ii] = 0
+							s.meta = 0
+							s.Unlock()
+							return c.unsub(key)
+						}
+						s.meta--
+						s.Unlock()
+						return c.unsub(key)
+					}
+				}
+				s.Unlock()
+				panic(key)
+			}
+			s.Unlock()
+		}
+	}
+}
 
 func (c *candleCodec) Sink(key core.Key, frame []byte) (core.CandleEvent, bool, error) {
-	return c.sink(&c.CandleBase, key, frame)
+	return c.sink(c.getStore(key), key, frame)
 }
 
 func (c *candleCodec) Try(key core.Key) (core.CandleEvent, bool, error) {
-	return c.try(&c.CandleBase, key)
+	return c.try(c.getStore(key), key)
+}
+
+func (c *candleCodec) getStore(key core.Key) *CandleStore {
+	key &^= core.IntMask
+
+	var (
+		hash = mix(key)
+		i    = int(hash & cuckooMask)
+		ii   = int(uint64(i) ^ (hash|1)&cuckooMask)
+	)
+
+	for {
+		if c.index[i] == key {
+			s := &c.store[i]
+			s.Lock()
+			if s.meta&^core.IntMask == key {
+				return s
+			}
+			s.Unlock()
+		}
+
+		if c.index[ii] == key {
+			s := &c.store[ii]
+			s.Lock()
+			if s.meta&^core.IntMask == key {
+				return s
+			}
+			s.Unlock()
+		}
+	}
+}
+
+func mix(key core.Key) uint64 {
+	key ^= key >> 33
+	key *= 0xff51afd7ed558ccd
+	key ^= key >> 29
+	return key
 }
 
 type tradeCodec struct {
-	tradeBase
+	endpoint
 	sub    ProtoMsgFunc
 	unsub  ProtoMsgFunc
 	decode BatchDecodeFunc[core.TradeEvent]
@@ -156,10 +484,10 @@ func NewTradeCodec(
 	decode BatchDecodeFunc[core.TradeEvent],
 ) TradeCodec {
 	return &tradeCodec{
-		tradeBase: tradeBase{endpoint: endpoint},
-		sub:       sub,
-		unsub:     unsub,
-		decode:    decode,
+		endpoint: endpoint,
+		sub:      sub,
+		unsub:    unsub,
+		decode:   decode,
 	}
 }
 
@@ -170,12 +498,21 @@ func (c *tradeCodec) Decode(frame []byte, destination []core.TradeEvent) (int, b
 	return c.decode(frame, destination)
 }
 
-type codecBase interface {
-	symbolBase | BookBase | CandleBase | tradeBase
+type endpoint string
+
+func (this endpoint) Endpoint() string { return string(this) }
+
+type WorkingState interface {
+	OrderBook | CandleStore
 }
 
-type symbolBase struct {
-	endpoint
+type OrderBook struct {
+	Bid kit.LeakyHeap[Bid]
+	Ask kit.LeakyHeap[Ask]
+
+	spinLock
+	_    [52]byte
+	meta uint64
 }
 
 type Bid uint64
@@ -192,28 +529,32 @@ func (this Ask) After(that Ask) bool  { return this > that }
 func (this Ask) Equal(that Ask) bool  { return this == that }
 func (this Ask) Compare(that Ask) int { return kit.BoolToInt(this > that) - kit.BoolToInt(this < that) }
 
-type BookBase struct {
-	Bid kit.LeakyHeap[Bid]
-	Ask kit.LeakyHeap[Ask]
-	endpoint
-}
-
 type CandleStore struct {
 	Interval [10]int64
 	New      [10]bool
 	Candle   [10]core.CandleEvent
 	_        [16]byte
+
+	spinLock
+	_    [52]byte
+	meta uint64
 }
 
-type CandleBase struct {
-	Symbol [1024]CandleStore
-	endpoint
+type spinLock struct {
+	state atomic.Bool
 }
 
-type tradeBase struct {
-	endpoint
+func (s *spinLock) Lock() {
+	backoff := 1
+	for !s.TryLock() {
+		for i := 0; i < backoff; i++ {
+			runtime.Gosched()
+		}
+		if backoff < 64 {
+			backoff <<= 1
+		}
+	}
 }
 
-type endpoint string
-
-func (this endpoint) Endpoint() string { return string(this) }
+func (s *spinLock) TryLock() bool { return s.state.CompareAndSwap(false, true) }
+func (s *spinLock) Unlock()       { s.state.Store(false) }

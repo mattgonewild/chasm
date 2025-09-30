@@ -8,6 +8,7 @@ type Key = uint64
 const (
 	DomainMask = domainMask
 	SymIntBit  = symIntBit
+	IntMask    = intMask
 )
 
 const (
